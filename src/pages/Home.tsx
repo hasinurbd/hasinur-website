@@ -1,14 +1,21 @@
-import React, { useState, useEffect } from 'react';
+import React, { Suspense, lazy } from 'react';
 import Navbar from '../components/public/Navbar';
 import Hero from '../components/public/Hero';
-import Experience from '../components/public/Experience';
-import Skills from '../components/public/Skills';
-import Projects from '../components/public/Projects';
-import Achievements from '../components/public/Achievements';
-import Blogs from '../components/public/Blogs';
-import Contact from '../components/public/Contact';
-import Footer from '../components/public/Footer';
-import FloatingChat from '../components/public/FloatingChat';
+
+const Experience = lazy(() => import('../components/public/Experience'));
+const Skills = lazy(() => import('../components/public/Skills'));
+const Projects = lazy(() => import('../components/public/Projects'));
+const Achievements = lazy(() => import('../components/public/Achievements'));
+const Blogs = lazy(() => import('../components/public/Blogs'));
+const Contact = lazy(() => import('../components/public/Contact'));
+const Footer = lazy(() => import('../components/public/Footer'));
+const FloatingChat = lazy(() => import('../components/public/FloatingChat'));
+
+const LoaderFallback = () => (
+  <div className="w-full py-20 flex justify-center items-center">
+    <div className="w-8 h-8 rounded-full border-4 border-blue-500/20 border-t-blue-500 animate-spin"></div>
+  </div>
+);
 
 export default function Home() {
   return (
@@ -17,16 +24,20 @@ export default function Home() {
       <Navbar />
       <main className="relative z-10 w-full overflow-hidden">
         <Hero />
-        <Experience />
-        <Skills />
-        <Projects />
-        <Achievements />
-        <Blogs />
-        <Contact />
+        <Suspense fallback={<LoaderFallback />}>
+          <Experience />
+          <Skills />
+          <Projects />
+          <Achievements />
+          <Blogs />
+          <Contact />
+        </Suspense>
       </main>
       <div className="relative z-10">
-        <Footer />
-        <FloatingChat />
+        <Suspense fallback={<LoaderFallback />}>
+          <Footer />
+          <FloatingChat />
+        </Suspense>
       </div>
     </div>
   );

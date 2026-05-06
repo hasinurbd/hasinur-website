@@ -12,8 +12,13 @@ export const hasSupabaseConfig = !!(supabaseUrl && supabaseAnonKey);
 
 export const uploadAsset = async (file: File): Promise<string | null> => {
   if (!hasSupabaseConfig) {
-    alert("Supabase not fully configured. Using mock data.");
-    return URL.createObjectURL(file);
+    alert("Supabase not fully configured. Storing in local mock storage (Base64).");
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = error => reject(error);
+      reader.readAsDataURL(file);
+    });
   }
   const fileExt = file.name.split('.').pop();
   const fileName = `${Math.random().toString(36).substring(2, 15)}_${Date.now()}.${fileExt}`;

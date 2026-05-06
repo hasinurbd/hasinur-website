@@ -121,7 +121,7 @@ export default function Hero() {
             Hire Me Now
           </motion.a>
 
-          <a href={profile.resume_url || "#"} className="flex items-center gap-2 px-8 py-3 bg-white/5 hover:bg-white/10 text-white rounded-full font-medium transition-all border border-white/10">
+          <a href={profile.resume_url || "#"} download="S_M_Hasinur_Rahman_CV.pdf" className="flex items-center gap-2 px-8 py-3 bg-white/5 hover:bg-white/10 text-white rounded-full font-medium transition-all border border-white/10">
             <Download size={20} />
             Download CV
           </a>

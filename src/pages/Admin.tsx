@@ -88,13 +88,6 @@ export default function Admin() {
             <Lock size={32} />
           </div>
           <h1 className="text-2xl font-bold text-white mb-2">Admin Security</h1>
-          {!hasSupabaseConfig && (
-            <p className="text-xs text-amber-500 mt-2 bg-amber-500/10 p-2 rounded-lg border border-amber-500/20">
-              Mock environment active. Login with:<br/> 
-              Email: <strong className="text-amber-400">hasinurrahman.me@gmail.com</strong><br/> 
-              Password: <strong className="text-amber-400">Hasi12@adev</strong>
-            </p>
-          )}
         </div>
 
         <form onSubmit={handleLogin} className="space-y-6">
