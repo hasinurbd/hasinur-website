@@ -198,3 +198,32 @@ export const mockBlogs = [
   }
 ];
 
+export const mockReviews = [
+  {
+    id: '1',
+    name: 'Sarah Jenkins',
+    avatar_url: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?ixlib=rb-4.0.3&auto=format&fit=crop&w=200&q=80',
+    country_flag: '🇺🇸',
+    rating: 5,
+    service_taken: 'Content Strategy & Copywriting',
+    text: 'Hasinur transformed our brand messaging completely. His ability to craft compelling narratives that resonate with our target audience is exceptional. Seen a 40% increase in engagement since we started working together.'
+  },
+  {
+    id: '2',
+    name: 'David Chen',
+    avatar_url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?ixlib=rb-4.0.3&auto=format&fit=crop&w=200&q=80',
+    country_flag: '🇨🇦',
+    rating: 5,
+    service_taken: 'Technical Writing',
+    text: 'It is rare to find someone who understands complex technical concepts and can explain them so simply. The documentation provided was top-notch and exactly what our developers needed.'
+  },
+  {
+    id: '3',
+    name: 'Elena Rodriguez',
+    avatar_url: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?ixlib=rb-4.0.3&auto=format&fit=crop&w=200&q=80',
+    country_flag: '🇪🇸',
+    rating: 5,
+    service_taken: 'Social Media Management',
+    text: 'Exceptional creativity and a keen eye for design. Hasinur not only provided great copy but also suggested visual directions that really made our campaigns pop.'
+  }
+];

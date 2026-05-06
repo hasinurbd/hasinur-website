@@ -1,9 +1,12 @@
-import React, { Suspense, lazy } from 'react';
+import React, { Suspense, lazy, useEffect } from 'react';
 import Navbar from '../components/public/Navbar';
 import Hero from '../components/public/Hero';
+import { supabase, hasSupabaseConfig } from '../lib/supabaseClient';
+import { useLocation } from 'react-router-dom';
 
 const Experience = lazy(() => import('../components/public/Experience'));
 const Skills = lazy(() => import('../components/public/Skills'));
+const Reviews = lazy(() => import('../components/public/Reviews'));
 const Projects = lazy(() => import('../components/public/Projects'));
 const Achievements = lazy(() => import('../components/public/Achievements'));
 const Blogs = lazy(() => import('../components/public/Blogs'));
@@ -18,6 +21,28 @@ const LoaderFallback = () => (
 );
 
 export default function Home() {
+  const location = useLocation();
+
+  useEffect(() => {
+    const fetchTitle = async () => {
+      let displayName = 'Portfolio';
+      if (hasSupabaseConfig) {
+        const { data, error } = await supabase.from('profile_info').select('name').single();
+        if (data && !error && data.name) {
+          displayName = data.name;
+        }
+      } else {
+        const saved = localStorage.getItem('mockProfile');
+        if (saved) {
+           const profile = JSON.parse(saved);
+           if (profile.name) displayName = profile.name;
+        }
+      }
+      document.title = `${displayName} | Portfolio`;
+    };
+    fetchTitle();
+  }, [location.pathname]);
+
   return (
     <div className="min-h-screen bg-slate-950 text-slate-200 font-sans selection:bg-blue-500/30">
       <div className="fixed inset-0 z-0 bg-[radial-gradient(ellipse_80%_80%_at_50%_-20%,rgba(37,99,235,0.15),rgba(255,255,255,0))] pointer-events-none"></div>
@@ -27,6 +52,7 @@ export default function Home() {
         <Suspense fallback={<LoaderFallback />}>
           <Experience />
           <Skills />
+          <Reviews />
           <Projects />
           <Achievements />
           <Blogs />

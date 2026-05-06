@@ -39,11 +39,6 @@ export default function Footer() {
     };
 
     fetchViews();
-    
-    const timer = setInterval(() => {
-      setViewCount(prev => prev + Math.floor(Math.random() * 2));
-    }, 10000);
-    return () => clearInterval(timer);
   }, []);
 
   const handleNavClick = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {

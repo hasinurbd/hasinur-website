@@ -1,6 +1,7 @@
 import React from 'react';
-import { Palette, Share2, Code, Video, Edit3, Terminal } from 'lucide-react';
+import { Palette, Share2, Code, Video, Edit3, Terminal, Sparkles } from 'lucide-react';
 import { motion } from 'motion/react';
+import { BackgroundBlobs, FloatingIcon } from './VisualElements';
 
 export default function Skills() {
   const skills = [
@@ -12,8 +13,15 @@ export default function Skills() {
   ];
 
   return (
-    <section id="skills" className="py-20 px-4 relative">
-      <div className="max-w-5xl mx-auto">
+    <section id="skills" className="relative py-20 px-4 overflow-hidden">
+      <BackgroundBlobs />
+      
+      <div className="absolute inset-0 pointer-events-none">
+        <FloatingIcon icon={<Sparkles size={20} />} top="30%" left="12%" delay={0} />
+        <FloatingIcon icon={<Code size={20} />} top="70%" left="85%" delay={1} />
+      </div>
+
+      <div className="max-w-5xl mx-auto relative z-10">
         <div className="text-center mb-16">
           <h2 className="text-3xl md:text-4xl font-bold mb-4">Core Competencies</h2>
           <div className="w-20 h-1 bg-blue-500 mx-auto rounded-full"></div>

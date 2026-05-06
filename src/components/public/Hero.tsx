@@ -58,7 +58,7 @@ export default function Hero() {
             className="relative w-44 h-44 md:w-56 md:h-56 rounded-full overflow-hidden border-4 border-slate-900 shadow-2xl bg-slate-800"
           >
             <img 
-              src={profile.avatar_url || "/hasinur_profile_pic_design_in_ps.png"} 
+              src={profile.avatar_url && profile.avatar_url.length > 5 ? profile.avatar_url : "/hasinur_profile_pic_design_in_ps.png"} 
               alt={profile.name} 
               className="w-full h-full object-cover grayscale-[20%] group-hover:grayscale-0 transition-all duration-500"
             />

@@ -6,8 +6,10 @@
   --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
 }
 
-body {
+html, body {
   font-family: var(--font-sans);
+  overflow-x: hidden;
+  max-width: 100%;
 }
 
 /* Fix Jodit text colors inside admin panel */

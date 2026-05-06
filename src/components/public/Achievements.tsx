@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { getMockData, mockAchievements as defaultAchievements } from '../../lib/mockData';
 import { supabase, hasSupabaseConfig } from '../../lib/supabaseClient';
-import { ArrowRight } from 'lucide-react';
+import { ArrowRight, Award, FileText } from 'lucide-react';
+import { BackgroundBlobs, FloatingIcon } from './VisualElements';
 
 export default function Achievements() {
   const [achievements, setAchievements] = useState(() => hasSupabaseConfig ? [] : getMockData('mock_achievements', defaultAchievements));
@@ -22,8 +23,15 @@ export default function Achievements() {
   };
 
   return (
-    <section id="achievements" className="py-24 px-4 bg-slate-900/30">
-      <div className="max-w-6xl mx-auto">
+    <section id="achievements" className="relative py-24 px-4 overflow-hidden">
+      <BackgroundBlobs />
+      
+      <div className="absolute inset-0 pointer-events-none">
+        <FloatingIcon icon={<Award size={24} />} top="15%" left="85%" delay={0} />
+        <FloatingIcon icon={<FileText size={20} />} top="65%" left="12%" delay={1} />
+      </div>
+
+      <div className="max-w-6xl mx-auto relative z-10">
         <div className="text-center mb-16">
           <h2 className="text-4xl md:text-5xl font-black mb-6 tracking-tight text-white">Achievements & Certifications</h2>
           <div className="w-24 h-1 bg-gradient-to-r from-blue-600 to-indigo-500 mx-auto rounded-full"></div>

@@ -50,46 +50,45 @@ export default function Experience() {
       </div>
 
       <div className="relative">
-        <div className="absolute left-4 md:left-1/2 top-0 bottom-0 w-0.5 bg-gradient-to-b from-blue-500/50 via-blue-500/20 to-transparent -translate-x-1/2"></div>
+        <div className="absolute left-[30px] md:left-1/2 top-0 bottom-0 w-[2px] bg-gradient-to-b from-blue-500/50 via-blue-500/20 to-transparent md:-translate-x-1/2"></div>
         
         <div className="space-y-12">
           {filtered.map((exp, index) => (
-            <div key={exp.id} className={cn("relative flex items-center justify-between md:justify-normal", index % 2 === 0 ? "md:flex-row-reverse" : "")}>
+            <div key={exp.id} className="relative flex flex-col md:flex-row items-start md:items-center w-full">
               
-              {/* Icon / Node */}
-              <div className="absolute left-4 md:left-1/2 -translate-x-1/2 flex items-center justify-center w-10 h-10 rounded-full bg-slate-900 border-2 border-blue-500 z-10 shadow-[0_0_15px_rgba(59,130,246,0.5)]">
-                {exp.type === 'education' && <GraduationCap size={18} className="text-blue-400" />}
-                {exp.type === 'professional' && <Briefcase size={18} className="text-blue-400" />}
-                {exp.type === 'creative' && <Palette size={18} className="text-blue-400" />}
+              {/* Desktop Date on one side */}
+              <div className={cn("hidden md:block w-1/2", index % 2 === 0 ? "text-right pr-12 order-1" : "text-left pl-12 order-3")}>
+                <span className="text-blue-400 font-bold tracking-widest text-sm uppercase">{exp.date_range}</span>
+              </div>
+
+              {/* Node (Center) */}
+              <div className="absolute left-[13px] md:static md:w-auto md:h-auto flex items-center justify-center z-10 md:order-2 md:-mx-4 mt-8 md:mt-0">
+                <div className="flex items-center justify-center w-8 h-8 rounded-full bg-slate-950 border-[3px] border-blue-500 shadow-[0_0_15px_rgba(59,130,246,0.6)]">
+                  <div className="w-2 h-2 rounded-full bg-blue-300"></div>
+                </div>
               </div>
 
               {/* Card content */}
-              <div className={cn("w-full pl-12 md:pl-0 md:w-[45%]", index % 2 === 0 ? "" : "md:text-right")}>
-                <div className="bg-white/5 backdrop-blur-lg border border-white/10 hover:border-blue-500/30 p-6 rounded-2xl transition-all hover:bg-white/10 group">
-                  <div className={cn("flex flex-col", index % 2 === 0 ? "" : "md:items-end")}>
-                    <div className={cn("flex items-center gap-4 mb-3", index % 2 === 0 ? "justify-start" : "md:justify-end justify-start")}>
-                      {exp.image_url && (
-                        <img src={exp.image_url} alt={`${exp.company_institution} logo`} className="w-12 h-12 rounded-lg object-cover bg-white" />
-                      )}
-                      <div>
-                        <span className="inline-block px-3 py-1 bg-blue-500/20 text-blue-300 text-xs font-semibold rounded-full mb-1">
-                          {exp.date_range}
-                        </span>
-                        <h3 className="text-xl font-bold text-white group-hover:text-blue-400 transition-colors">{exp.role}</h3>
-                      </div>
-                    </div>
-                    <h4 className="text-lg font-medium text-slate-300 mb-3">{exp.company_institution}</h4>
-                    
-                    <div className="text-sm text-slate-400 leading-relaxed bg-slate-900/40 p-4 rounded-xl border border-white/5 mb-4 [&_ul]:list-disc [&_ul]:ml-5 [&_ol]:list-decimal [&_ol]:ml-5 [&_p]:mb-2" dangerouslySetInnerHTML={{ __html: exp.description }} />
-                    
-                    {exp.bullet_points && exp.bullet_points.length > 0 && (
-                      <ul className="list-disc list-outside pl-4 space-y-1 mt-2 text-sm text-slate-400 marker:text-blue-500">
-                        {exp.bullet_points.map((point: string, i: number) => (
-                          <li key={i}>{point}</li>
-                        ))}
-                      </ul>
-                    )}
+              <div className={cn("w-full pl-[60px] pr-4 md:px-0 md:w-1/2", index % 2 === 0 ? "md:pl-12 order-3" : "md:pr-12 order-1 md:text-right")}>
+                <div className="bg-slate-900/40 backdrop-blur-md border border-white/10 hover:border-blue-500/50 p-6 rounded-2xl transition-all hover:bg-slate-800/60 group text-left relative overflow-hidden">
+                  <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 rounded-full blur-3xl -mr-10 -mt-10 pointer-events-none"></div>
+                  
+                  {/* Mobile Date - only visible on small screens */}
+                  <div className="md:hidden mb-4">
+                    <span className="text-blue-400 font-bold tracking-widest text-xs uppercase">{exp.date_range}</span>
                   </div>
+                  
+                  <div className={cn("flex items-start gap-4 mb-3", index % 2 === 0 ? "" : "md:flex-row-reverse")}>
+                    {exp.image_url && (
+                      <img src={exp.image_url} alt={`${exp.company_institution} logo`} className="w-10 h-10 rounded-lg object-cover bg-white shrink-0" />
+                    )}
+                    <div>
+                      <h3 className="text-xl font-bold text-white group-hover:text-blue-300 transition-colors leading-tight">{exp.role}</h3>
+                      <h4 className="text-sm font-semibold text-blue-200 mt-1">{exp.company_institution}</h4>
+                    </div>
+                  </div>
+                  
+                  <div className="text-sm text-slate-300 leading-relaxed mt-4 [&_ul]:list-none [&_ul]:pl-0 [&_ul_li]:relative [&_ul_li]:pl-6 [&_ul_li::before]:content-[''] [&_ul_li::before]:absolute [&_ul_li::before]:left-0 [&_ul_li::before]:top-[8px] [&_ul_li::before]:w-4 [&_ul_li::before]:h-4 [&_ul_li::before]:bg-[url('data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSIgc3Ryb2tlPSIjM2I4MmY2IiBzdHJva2Utd2lkdGg9IjIiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIgc3Ryb2tlLWxpbmVqb2luPSJyb3VuZCI+PHBhdGggZD0iTTIyIDExLjA4VjEyYTEwIDEwIDAgMSAxLTUuOTMtOS4xNCIvPjxwb2x5bGluZSBwb2ludHM9IjIyIDQgMTIgMTQuMDEgOSAxMSIvPjwvc3ZnPg==')] [&_ul_li::before]:bg-no-repeat [&_ul_li::before]:bg-contain [&_p]:mb-2 space-y-2" dangerouslySetInnerHTML={{ __html: exp.description }} />
                 </div>
               </div>
             </div>

@@ -83,8 +83,8 @@ export default function Navbar() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center">
           <a href="/" onClick={(e) => handleNavClick(e, '/')} className="text-2xl font-black tracking-tighter bg-clip-text text-transparent bg-gradient-to-r from-blue-400 via-blue-500 to-indigo-500 flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full border-2 border-blue-500 overflow-hidden shadow-[0_0_15px_rgba(37,99,235,0.3)]">
-              <img src={avatarUrl || "/hasinur_profile_pic_design_in_ps.png"} alt="Profile" className="w-full h-full object-cover" />
+            <div className="w-10 h-10 rounded-full border-2 border-blue-500 overflow-hidden shadow-[0_0_15px_rgba(37,99,235,0.3)] bg-slate-900">
+              <img src={avatarUrl && avatarUrl.length > 5 ? avatarUrl : "/hasinur_profile_pic_design_in_ps.png"} alt="Profile" className="w-full h-full object-cover" />
             </div>
           </a>
           
