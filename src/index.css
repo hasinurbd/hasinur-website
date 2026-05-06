@@ -1,0 +1,29 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+@import "tailwindcss";
+@plugin "@tailwindcss/typography";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+}
+
+body {
+  font-family: var(--font-sans);
+}
+
+/* Fix Jodit text colors inside admin panel */
+.jodit-wysiwyg {
+  color: #fff !important;
+}
+.jodit-wysiwyg p, .jodit-wysiwyg h1, .jodit-wysiwyg h2, .jodit-wysiwyg h3, .jodit-wysiwyg li {
+  color: #cbd5e1; /* slate-300 */
+}
+/* Allow user to override text colors using inline styles from editor */
+.jodit-wysiwyg [style*="color"] {
+  color: inherit !important;
+}
+
+/* Fix for public facing prose to allow inline colors */
+.prose [style*="color"] {
+  color: inherit !important;
+}
+
