@@ -1,8 +1,21 @@
 import React, { useState } from 'react';
-import { Mail, Phone, MapPin, Send, MessageSquare, Heart, Share2 } from 'lucide-react';
+import { Mail, Phone, MapPin, Send, MessageSquare, Heart, Share2, Facebook, Instagram, Linkedin, Twitter, Youtube } from 'lucide-react';
 import { getMockProfile } from '../../lib/mockData';
 import { supabase, hasSupabaseConfig } from '../../lib/supabaseClient';
 import { FloatingIcon, BackgroundBlobs } from './VisualElements';
+
+function SocialLink({ href, icon, target }: { href: string; icon: React.ReactNode; target?: string }) {
+  return (
+    <a 
+      href={href}
+      target={target}
+      rel={target === "_blank" ? "noopener noreferrer" : undefined}
+      className="w-10 h-10 flex items-center justify-center rounded-full bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white border border-white/10 transition-all outline-none"
+    >
+      {icon}
+    </a>
+  );
+}
 
 export default function Contact() {
   const [profile] = useState(getMockProfile());
@@ -94,8 +107,17 @@ export default function Contact() {
             </div>
 
             <div className="mt-12 p-8 bg-slate-800/50 rounded-2xl border border-white/5">
-              <h4 className="text-white font-medium mb-2">Connect online</h4>
-              <p className="text-slate-400 text-sm mb-6">You can also find me on social media below or through my resume.</p>
+              <h4 className="text-white font-medium mb-4">Connect online</h4>
+              
+              <div className="flex flex-wrap items-center gap-3 mb-6">
+                <SocialLink href="https://www.facebook.com/hasinur01" target="_blank" icon={<Facebook size={18} />} />
+                <SocialLink href="https://www.instagram.com/_._.hasinur_._" target="_blank" icon={<Instagram size={18} />} />
+                <SocialLink href="https://www.linkedin.com/in/hasinurbd" target="_blank" icon={<Linkedin size={18} />} />
+                <SocialLink href="https://www.behance.net/hasinurrahman11" target="_blank" icon={<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M22 7h-7v-2h7v2zm1.726 10c-.442 1.297-2.029 3-5.101 3-3.074 0-5.564-1.729-5.564-5.675 0-3.91 2.325-5.92 5.466-5.92 3.082 0 4.964 1.782 5.375 4.426.078.506.109 1.188.095 2.14h-8.027c.13 3.211 3.483 3.312 4.588 2.029h3.168zm-7.686-4h4.965c-.105-1.547-1.136-2.219-2.477-2.219-1.466 0-2.277.768-2.488 2.219zm-3.197.809c0 .73-.028 1.411-.084 2.039-.187 2.083-1.619 3.152-3.879 3.152h-8.88v-16h8.041c2.208 0 4.093 1.05 4.093 3.111 0 1.258-.755 2.102-1.848 2.502 1.488.232 2.657 1.487 2.657 3.196h-.1zm-8.843-6.809v4h4.093c1.391 0 2.015-.558 2.015-1.554 0-1.026-.607-1.688-2.034-1.688h-4.736v-.758zm0 6h4.529c1.64 0 2.222.753 2.222 1.942 0 1.008-.667 1.776-2.015 1.776h-4.736v-3.718z"/></svg>} />
+                <SocialLink href="https://x.com/hasinurofficial" target="_blank" icon={<Twitter size={18} />} />
+                <SocialLink href="https://www.youtube.com/@hasinurme" target="_blank" icon={<Youtube size={18} />} />
+              </div>
+
               <div className="flex gap-4">
                 <a href="/" onClick={(e) => {
                   e.preventDefault();

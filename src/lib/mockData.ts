@@ -5,7 +5,7 @@ export const defaultMockProfile = {
   email: "hasinurrahman.me@gmail.com",
   phone: "+8801518914773",
   location: "Dhaka, Bangladesh",
-  avatar_url: "/hasinur_profile_pic_design_in_ps.png",
+  avatar_url: "",
   resume_url: "#",
 };
 
@@ -23,124 +23,66 @@ export const saveMockData = (key: string, data: any) => {
   }
 };
 
-export const getMockProfile = () => getMockData('mockProfile', defaultMockProfile);
-export const saveMockProfile = (data: any) => saveMockData('mockProfile', data);
+export const getMockProfile = () => getMockData('mock_profile', defaultMockProfile);
+export const saveMockProfile = (data: any) => saveMockData('mock_profile', data);
 
 export const mockExperiences = [
   {
     id: "1",
-    company_institution: "United International University",
-    role: "BSc in Computer Science and Engineering",
+    company_institution: "Itel",
+    role: "Group Moderator",
     status: "Current",
-    type: "education",
-    description: "Pursuing undergraduate studies with a focus on problem-solving and software development.",
-    bullet_points: [
-      "Core focus on CSE fundamentals",
-      "Engaged in technical projects",
-      "Active in extracurricular activities"
-    ],
-    date_range: "2023 - Present"
+    type: "professional",
+    description: "",
+    bullet_points: [],
+    date_range: ""
   },
   {
     id: "2",
-    company_institution: "itel",
-    role: "Official Group Moderator",
+    company_institution: "হযবরল English",
+    role: "Manager",
     status: "Current",
     type: "professional",
-    description: "Managing community engagement and providing support for a large user base.",
-    bullet_points: [
-      "Community management",
-      "User support and engagement",
-      "Content moderation"
-    ],
-    date_range: "2022 - Present"
+    description: "",
+    bullet_points: [],
+    date_range: ""
   },
   {
     id: "3",
-    company_institution: "হযবরল English",
-    role: "General Manager",
-    status: "Current",
-    type: "professional",
-    description: "Overseeing management and operations.",
-    bullet_points: [
-      "Project management",
-      "Operations coordination",
-      "Team leadership"
-    ],
-    date_range: "2023 - Present"
+    company_institution: "ACS",
+    role: "Response Team Member & Designer",
+    status: "Former",
+    type: "creative",
+    description: "",
+    bullet_points: [],
+    date_range: ""
   },
   {
     id: "4",
     company_institution: "Clienteno",
-    role: "HR & Graphics Designer",
+    role: "Hr & Graphics Designer",
     status: "Former",
     type: "creative",
-    description: "Dual role managing HR processes and creative design assets.",
-    bullet_points: [
-      "Visual design for branding",
-      "Recruitment coordination",
-      "Employee engagement"
-    ],
-    date_range: "2021 - 2022"
-  },
-  {
-    id: "5",
-    company_institution: "ACS",
-    role: "Response Team Member & Designer",
-    status: "Former",
-    type: "professional",
-    description: "Fast-paced role focusing on design and quick response operations.",
-    bullet_points: [
-      "Design for social media",
-      "Operations support",
-      "Brand monitoring"
-    ],
-    date_range: "2020 - 2021"
+    description: "",
+    bullet_points: [],
+    date_range: ""
   }
 ];
 
 export const mockPortfolioItems = [
   {
     id: '1',
-    title: 'Brand Identity Design',
+    title: 'Poster Shorai',
     category: 'graphics',
     image_url: 'https://images.unsplash.com/photo-1572044162444-ad60f128bde2?auto=format&fit=crop&q=80&w=600',
-    link: 'https://dribbble.com'
+    link: 'https://www.postershorai.com/'
   },
   {
     id: '2',
-    title: 'E-commerce UI/UX Website',
-    category: 'web',
-    image_url: 'https://images.unsplash.com/photo-1547658719-da2b51169166?auto=format&fit=crop&q=80&w=600',
-    link: 'https://github.com'
-  },
-  {
-    id: '3',
-    title: 'Ad Campaign Creative',
-    category: 'graphics',
-    image_url: 'https://images.unsplash.com/photo-1542744173-8e7e53415bb0?auto=format&fit=crop&q=80&w=600',
-    link: '#'
-  },
-  {
-    id: '4',
-    title: 'Social Media Strategy',
+    title: 'PlastiXide',
     category: 'projects',
-    image_url: 'https://images.unsplash.com/photo-1611162617213-7d7a39e9b1d7?auto=format&fit=crop&q=80&w=600',
-    link: 'https://linkedin.com'
-  },
-  {
-    id: '5',
-    title: 'Product Launch Video',
-    category: 'video',
-    image_url: 'https://images.unsplash.com/photo-1536240478700-b869070f9279?auto=format&fit=crop&q=80&w=600',
-    link: 'https://youtube.com'
-  },
-  {
-    id: '6',
-    title: 'Corporate Web Dashboard',
-    category: 'web',
-    image_url: 'https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&fit=crop&q=80&w=600',
-    link: 'https://behance.net'
+    image_url: 'https://images.unsplash.com/photo-1547658719-da2b51169166?auto=format&fit=crop&q=80&w=600',
+    link: 'https://www.plastixide.com/'
   }
 ];
 

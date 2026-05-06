@@ -15,13 +15,17 @@ export default function Reviews() {
           .from('client_reviews')
           .select('*')
           .order('created_at', { ascending: false });
-        if (data && !error) setReviews(data);
+        if (data && !error && data.length > 0) {
+          setReviews(data);
+        } else {
+          setReviews(getMockData('mock_reviews', defaultMockReviews));
+        }
       };
       fetchReviews();
     }
   }, []);
 
-  if (reviews.length === 0) return null;
+  if (reviews.length === 0) return (<section id="reviews" className="py-24 text-center text-slate-400">No reviews yet.</section>);
 
   return (
     <section id="reviews" className="relative py-24 px-4 overflow-hidden">
@@ -34,20 +38,20 @@ export default function Reviews() {
       </div>
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-        <div className="mb-16 md:mb-24 relative">
+        <div className="text-center mb-16 md:mb-24 relative">
           <motion.h2 
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            className="text-4xl md:text-5xl font-bold text-white mb-6 uppercase tracking-tight"
+            className="text-4xl md:text-5xl font-black mb-6 tracking-tight text-white"
           >
-            Client <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-teal-500">Reviews</span>
+            Client <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-indigo-500">Reviews</span>
           </motion.h2>
           <motion.div 
             initial={{ opacity: 0, scaleX: 0 }}
             whileInView={{ opacity: 1, scaleX: 1 }}
             viewport={{ once: true }}
-            className="h-1 w-24 bg-gradient-to-r from-emerald-500 to-teal-500 origin-left"
+            className="w-24 h-1 bg-gradient-to-r from-blue-600 to-indigo-500 mx-auto rounded-full origin-center"
           ></motion.div>
         </div>
 
@@ -59,16 +63,20 @@ export default function Reviews() {
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               transition={{ delay: index * 0.1 }}
-              className="bg-slate-800/20 backdrop-blur-md border border-white/5 rounded-3xl p-8 hover:bg-slate-800/40 transition-colors group relative"
+              className="bg-slate-800/20 backdrop-blur-md border border-white/5 rounded-3xl p-8 hover:bg-slate-800/40 hover:border-blue-500/30 transition-all group relative"
             >
-              <div className="absolute -top-4 -right-4 opacity-5 text-emerald-500 group-hover:opacity-10 transition-opacity">
+              <div className="absolute -top-4 -right-4 opacity-5 text-blue-500 group-hover:opacity-10 transition-opacity">
                 <Quote size={80} />
               </div>
               
-              <div className="flex gap-1 mb-6 text-emerald-400">
-                {[...Array(review.rating || 5)].map((_, i) => (
-                  <Star key={i} size={16} fill="currentColor" />
+              <div className="flex gap-1 mb-6 text-blue-400 items-center">
+                <span className="text-white font-bold text-sm mr-1">{review.rating || 5}</span>
+                {[...Array(Math.floor(review.rating || 5))].map((_, i) => (
+                  <Star key={`full-${i}`} size={16} fill="currentColor" />
                 ))}
+                {((review.rating || 5) % 1 >= 0.5) && (
+                  <StarHalf size={16} fill="currentColor" />
+                )}
               </div>
               
               <p className="text-slate-300 italic mb-8 relative z-10 line-clamp-4">
@@ -76,15 +84,21 @@ export default function Reviews() {
               </p>
               
               <div className="flex items-center gap-4 mt-auto">
-                <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-emerald-500/30">
-                  <img src={review.avatar_url || "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80"} alt={review.name} className="w-full h-full object-cover" />
+                <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-blue-500/30">
+                  <img src={review.avatar_url || "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?ixlib=rb-1.2.1&auto=format&fit=facearea&facepad=2&w=256&h=256&q=80"} alt={review.name} loading="lazy" className="w-full h-full object-cover" />
                 </div>
                 <div>
                   <h4 className="text-white font-bold flex items-center gap-2">
                     {review.name}
-                    <span className="text-lg" title="Country Flag">{review.country_flag}</span>
+                    <span className="text-lg flex items-center" title="Client Location/Company">
+                      {review.country_flag?.startsWith('http') ? (
+                        <img src={review.country_flag} alt="Client Logo" className="h-5 object-contain rounded-sm" />
+                      ) : (
+                        review.country_flag
+                      )}
+                    </span>
                   </h4>
-                  <p className="text-sm text-emerald-400/80">{review.service_taken}</p>
+                  <p className="text-sm text-blue-400/80">{review.service_taken}</p>
                 </div>
               </div>
             </motion.div>

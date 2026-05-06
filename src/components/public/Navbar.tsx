@@ -16,7 +16,12 @@ export default function Navbar() {
     if (hasSupabaseConfig) {
       const fetchProfile = async () => {
         const { data, error } = await supabase.from('profile_info').select('avatar_url').single();
-        if (data && !error && data.avatar_url) setAvatarUrl(data.avatar_url);
+        if (data && !error && data.avatar_url) {
+          setAvatarUrl(data.avatar_url);
+          const cached = JSON.parse(localStorage.getItem('mock_profile') || '{}');
+          cached.avatar_url = data.avatar_url;
+          localStorage.setItem('mock_profile', JSON.stringify(cached));
+        }
       };
       fetchProfile();
     }
@@ -86,6 +91,7 @@ export default function Navbar() {
             <div className="w-10 h-10 rounded-full border-2 border-blue-500 overflow-hidden shadow-[0_0_15px_rgba(37,99,235,0.3)] bg-slate-900">
               <img src={avatarUrl && avatarUrl.length > 5 ? avatarUrl : "/hasinur_profile_pic_design_in_ps.png"} alt="Profile" className="w-full h-full object-cover" />
             </div>
+            HASINUR.
           </a>
           
           <nav className="hidden md:flex space-x-8 items-center">

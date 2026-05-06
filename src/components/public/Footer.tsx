@@ -90,7 +90,6 @@ export default function Footer() {
             <li><a href="/achievements" onClick={(e) => handleNavClick(e, '/achievements')} className="text-slate-400 hover:text-blue-400 text-sm transition-colors">Achievements</a></li>
             <li><a href="/blogs" onClick={(e) => handleNavClick(e, '/blogs')} className="text-slate-400 hover:text-blue-400 text-sm transition-colors">Blogs</a></li>
             <li><a href="/contact" onClick={(e) => handleNavClick(e, '/contact')} className="text-slate-400 hover:text-blue-400 text-sm transition-colors">Contact</a></li>
-            <li><a href="/admin" className="text-slate-400 hover:text-blue-400 text-sm transition-colors block mt-2">Admin Panel</a></li>
           </ul>
         </div>
 

@@ -11,7 +11,11 @@ export default function Achievements() {
     if (hasSupabaseConfig) {
       const fetchAch = async () => {
         const { data, error } = await supabase.from('achievements').select('*').order('date', { ascending: false });
-        if (data && !error) setAchievements(data);
+        if (data && !error && data.length > 0) {
+          setAchievements(data);
+        } else {
+          setAchievements(getMockData('mock_achievements', defaultAchievements));
+        }
       };
       fetchAch();
     }
@@ -41,7 +45,7 @@ export default function Achievements() {
           {achievements.map(ach => (
             <div key={ach.id} className="bg-slate-800/40 border border-white/5 rounded-2xl overflow-hidden hover:bg-slate-800/80 transition-colors group flex flex-col h-full">
               <div className="h-48 overflow-hidden relative">
-                <img src={ach.image_url} alt={ach.title} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
+                <img src={ach.image_url} alt={ach.title} loading="lazy" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
                 <div className="absolute inset-0 bg-blue-900/20 mix-blend-overlay group-hover:opacity-0 transition-opacity"></div>
               </div>
               

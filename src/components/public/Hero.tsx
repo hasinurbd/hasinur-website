@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Facebook, Linkedin, Twitter, Youtube, Download, Palette, CodeXml, Layers, Cpu, Figma, Sparkles } from 'lucide-react';
+import { Facebook, Linkedin, Twitter, Youtube, Download, Palette, CodeXml, Layers, Cpu, Figma, Sparkles, Instagram } from 'lucide-react';
 import { getMockProfile } from '../../lib/mockData';
 import { supabase, hasSupabaseConfig } from '../../lib/supabaseClient';
 import { motion, AnimatePresence } from 'motion/react';
@@ -21,7 +21,10 @@ export default function Hero() {
     if (hasSupabaseConfig) {
       const fetchProfile = async () => {
         const { data, error } = await supabase.from('profile_info').select('*').single();
-        if (data && !error) setProfile(data);
+        if (data && !error) {
+          setProfile(data);
+          localStorage.setItem('mock_profile', JSON.stringify(data));
+        }
       };
       fetchProfile();
     }
@@ -58,7 +61,7 @@ export default function Hero() {
             className="relative w-44 h-44 md:w-56 md:h-56 rounded-full overflow-hidden border-4 border-slate-900 shadow-2xl bg-slate-800"
           >
             <img 
-              src={profile.avatar_url && profile.avatar_url.length > 5 ? profile.avatar_url : "/hasinur_profile_pic_design_in_ps.png"} 
+              src={profile.avatar_url && profile.avatar_url.length > 5 ? profile.avatar_url : `/hasinur_profile_pic_design_in_ps.png`} 
               alt={profile.name} 
               className="w-full h-full object-cover grayscale-[20%] group-hover:grayscale-0 transition-all duration-500"
             />
@@ -109,13 +112,9 @@ export default function Hero() {
           <motion.a 
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            href="/contact"
-            onClick={(e) => {
-              e.preventDefault();
-              window.history.pushState(null, '', '/contact');
-              const el = document.getElementById('contact');
-              if(el) el.scrollIntoView({ behavior: 'smooth' });
-            }}
+            href="https://wa.me/8801518914773"
+            target="_blank"
+            rel="noopener noreferrer"
             className="px-10 py-4 bg-blue-600 hover:bg-blue-500 text-white rounded-full font-bold transition-all shadow-[0_10px_30px_rgba(37,99,235,0.4)] flex items-center gap-2"
           >
             Hire Me Now
@@ -126,11 +125,13 @@ export default function Hero() {
             Download CV
           </a>
           
-          <div className="flex items-center space-x-3 ml-4">
-            <SocialLink href="#" icon={<Facebook size={18} />} />
-            <SocialLink href="#" icon={<Linkedin size={18} />} />
-            <SocialLink href="#" icon={<Twitter size={18} />} />
-            <SocialLink href="#" icon={<Youtube size={18} />} />
+          <div className="flex flex-wrap items-center justify-center space-x-3 mt-4 sm:mt-0 ml-4 gap-y-2">
+            <SocialLink href="https://www.facebook.com/hasinur01" target="_blank" icon={<Facebook size={18} />} />
+            <SocialLink href="https://www.instagram.com/_._.hasinur_._" target="_blank" icon={<Instagram size={18} />} />
+            <SocialLink href="https://www.linkedin.com/in/hasinurbd" target="_blank" icon={<Linkedin size={18} />} />
+            <SocialLink href="https://www.behance.net/hasinurrahman11" target="_blank" icon={<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M22 7h-7v-2h7v2zm1.726 10c-.442 1.297-2.029 3-5.101 3-3.074 0-5.564-1.729-5.564-5.675 0-3.91 2.325-5.92 5.466-5.92 3.082 0 4.964 1.782 5.375 4.426.078.506.109 1.188.095 2.14h-8.027c.13 3.211 3.483 3.312 4.588 2.029h3.168zm-7.686-4h4.965c-.105-1.547-1.136-2.219-2.477-2.219-1.466 0-2.277.768-2.488 2.219zm-3.197.809c0 .73-.028 1.411-.084 2.039-.187 2.083-1.619 3.152-3.879 3.152h-8.88v-16h8.041c2.208 0 4.093 1.05 4.093 3.111 0 1.258-.755 2.102-1.848 2.502 1.488.232 2.657 1.487 2.657 3.196h-.1zm-8.843-6.809v4h4.093c1.391 0 2.015-.558 2.015-1.554 0-1.026-.607-1.688-2.034-1.688h-4.074v-.758zm0 6h4.529c1.64 0 2.222.753 2.222 1.942 0 1.008-.667 1.776-2.015 1.776h-4.736v-3.718z"/></svg>} />
+            <SocialLink href="https://x.com/hasinurofficial" target="_blank" icon={<Twitter size={18} />} />
+            <SocialLink href="https://www.youtube.com/@hasinurme" target="_blank" icon={<Youtube size={18} />} />
           </div>
         </div>
       </motion.div>
@@ -147,11 +148,13 @@ export default function Hero() {
   );
 }
 
-function SocialLink({ href, icon }: { href: string; icon: React.ReactNode }) {
+function SocialLink({ href, icon, target }: { href: string; icon: React.ReactNode; target?: string }) {
   return (
     <motion.a 
       whileHover={{ y: -3 }}
       href={href} 
+      target={target}
+      rel={target === "_blank" ? "noopener noreferrer" : undefined}
       className="w-10 h-10 flex items-center justify-center rounded-full bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white border border-white/10 transition-all outline-none"
     >
       {icon}

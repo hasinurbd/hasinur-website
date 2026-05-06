@@ -12,7 +12,11 @@ export default function Blogs() {
     if (hasSupabaseConfig) {
       const fetchBlogs = async () => {
         const { data, error } = await supabase.from('blogs').select('*').order('published_at', { ascending: false });
-        if (data && !error) setBlogs(data);
+        if (data && !error && data.length > 0) {
+          setBlogs(data);
+        } else {
+          setBlogs(getMockData('mock_blogs', defaultMockBlogs));
+        }
       };
       fetchBlogs();
     }
@@ -40,6 +44,7 @@ export default function Blogs() {
                   <img 
                     src={blog.image_url} 
                     alt={blog.title}
+                    loading="lazy"
                     className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-slate-900 to-transparent"></div>
@@ -73,7 +78,7 @@ export default function Blogs() {
           <div className="bg-slate-900 border border-white/10 rounded-2xl w-full max-w-3xl max-h-[90vh] overflow-y-auto flex flex-col shadow-2xl custom-scrollbar" onClick={e => e.stopPropagation()}>
             {selectedBlog.image_url && (
               <div className="w-full h-64 md:h-80 relative shrink-0">
-                <img src={selectedBlog.image_url} alt={selectedBlog.title} className="w-full h-full object-cover" />
+                <img src={selectedBlog.image_url} alt={selectedBlog.title} loading="lazy" className="w-full h-full object-cover" />
                 <button onClick={() => setSelectedBlog(null)} className="absolute top-4 right-4 bg-black/50 hover:bg-black/80 text-white rounded-full p-2 transition-colors">
                   <X size={20} />
                 </button>

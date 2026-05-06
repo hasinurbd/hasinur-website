@@ -15,7 +15,11 @@ export default function Projects() {
     if (hasSupabaseConfig) {
       const fetchItems = async () => {
         const { data, error } = await supabase.from('portfolio_items').select('*');
-        if (data && !error) setItems(data);
+        if (data && !error && data.length > 0) {
+          setItems(data);
+        } else {
+          setItems(getMockData('mock_portfolio', mockPortfolioItems));
+        }
       };
       fetchItems();
     }
@@ -50,7 +54,7 @@ export default function Projects() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
           {filtered.map(item => (
             <a key={item.id} href={item.link || '#'} target={item.link && item.link !== '#' ? "_blank" : "_self"} rel="noopener noreferrer" className="group relative overflow-hidden rounded-2xl bg-slate-800 aspect-[4/3] block border border-white/5 shadow-lg">
-              <img src={item.image_url} alt={item.title} className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
+              <img src={item.image_url} alt={item.title} loading="lazy" className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
               <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/40 to-transparent opacity-80 group-hover:opacity-90 transition-opacity"></div>
               
               {item.title === 'Poster Shorai' && (

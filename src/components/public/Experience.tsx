@@ -18,13 +18,68 @@ export default function Experience() {
           .from('experiences')
           .select('*')
           .order('created_at', { ascending: false });
-        if (data && !error) setExperiences(data);
+        if (data && !error && data.length > 0) {
+          setExperiences(data);
+        } else {
+          setExperiences(getMockData('mock_experiences', mockExperiences));
+        }
       };
       fetchExp();
     }
   }, []);
 
   const filtered = experiences.filter(exp => filter === 'all' || exp.type === filter);
+
+  const formatDateRange = (range: string) => {
+    if (!range) return null;
+    const parts = range.split(' to ');
+    if (parts.length !== 2) return <span>{range}</span>;
+
+    const [startStr, endStr] = parts;
+    
+    try {
+      const startDate = new Date(startStr);
+      const startFormat = startDate.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+      
+      let endFormat = 'Present';
+      let endDate = new Date();
+      if (endStr && endStr !== 'Present' && endStr.trim() !== '') {
+        const parsedEnd = new Date(endStr);
+        if (!isNaN(parsedEnd.getTime())) {
+          endDate = parsedEnd;
+          endFormat = endDate.toLocaleDateString('en-US', { month: 'short', year: 'numeric' });
+        }
+      }
+
+      if (isNaN(startDate.getTime())) return <span>{range}</span>;
+
+      let months = (endDate.getFullYear() - startDate.getFullYear()) * 12;
+      months -= startDate.getMonth();
+      months += endDate.getMonth();
+      // add an extra month to be inclusive
+      months += 1;
+      
+      let durationStr = '';
+      if (months > 0) {
+        const years = Math.floor(months / 12);
+        const remainingMonths = months % 12;
+        if (years > 0) durationStr += `${years} yr${years > 1 ? 's' : ''} `;
+        if (remainingMonths > 0) durationStr += `${remainingMonths} mo${remainingMonths > 1 ? 's' : ''}`;
+        durationStr = durationStr.trim();
+      } else {
+        durationStr = '1 mo';
+      }
+
+      return (
+        <span className="flex flex-col items-center md:items-end">
+          <span>{startFormat} - {endFormat}</span>
+          <span className="text-xs text-blue-500/70 lowercase font-medium mt-0.5">{durationStr}</span>
+        </span>
+      );
+    } catch(e) {
+      return <span>{range}</span>;
+    }
+  };
 
   return (
     <section id="experience" className="relative py-24 px-4 max-w-5xl mx-auto overflow-hidden">
@@ -57,8 +112,8 @@ export default function Experience() {
             <div key={exp.id} className="relative flex flex-col md:flex-row items-start md:items-center w-full">
               
               {/* Desktop Date on one side */}
-              <div className={cn("hidden md:block w-1/2", index % 2 === 0 ? "text-right pr-12 order-1" : "text-left pl-12 order-3")}>
-                <span className="text-blue-400 font-bold tracking-widest text-sm uppercase">{exp.date_range}</span>
+              <div className={cn("hidden md:block w-1/2", index % 2 === 0 ? "text-right pr-12 order-1" : "text-left pl-12 order-3 [&_span]:items-start")}>
+                <div className="text-blue-400 font-bold tracking-widest text-sm uppercase">{formatDateRange(exp.date_range)}</div>
               </div>
 
               {/* Node (Center) */}
@@ -75,12 +130,12 @@ export default function Experience() {
                   
                   {/* Mobile Date - only visible on small screens */}
                   <div className="md:hidden mb-4">
-                    <span className="text-blue-400 font-bold tracking-widest text-xs uppercase">{exp.date_range}</span>
+                    <div className="text-blue-400 font-bold tracking-widest text-xs uppercase [&_span]:items-start">{formatDateRange(exp.date_range)}</div>
                   </div>
                   
                   <div className={cn("flex items-start gap-4 mb-3", index % 2 === 0 ? "" : "md:flex-row-reverse")}>
                     {exp.image_url && (
-                      <img src={exp.image_url} alt={`${exp.company_institution} logo`} className="w-10 h-10 rounded-lg object-cover bg-white shrink-0" />
+                      <img src={exp.image_url} alt={`${exp.company_institution} logo`} loading="lazy" className="w-10 h-10 rounded-lg object-cover bg-white shrink-0" />
                     )}
                     <div>
                       <h3 className="text-xl font-bold text-white group-hover:text-blue-300 transition-colors leading-tight">{exp.role}</h3>

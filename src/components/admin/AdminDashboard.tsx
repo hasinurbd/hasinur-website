@@ -20,6 +20,7 @@ export default function AdminDashboard({ session }: { session: any }) {
   };
   const [profileData, setProfileData] = useState(getMockProfile());
   const [listData, setListData] = useState<any[]>([]);
+  const [editingItemId, setEditingItemId] = useState<string | null>(null);
 
   useEffect(() => {
     document.title = `${profileData?.name || 'Portfolio'} | Admin - ${activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}`;
@@ -49,6 +50,8 @@ export default function AdminDashboard({ session }: { session: any }) {
   };
 
   useEffect(() => {
+    setListData([]);
+    setEditingItemId(null);
     if (!hasSupabaseConfig) {
       if (activeTab === 'profile') {
         setProfileData(getMockProfile());
@@ -67,7 +70,12 @@ export default function AdminDashboard({ session }: { session: any }) {
       if (activeTab === 'profile') {
         const fetchProfile = async () => {
           const { data, error } = await supabase.from('profile_info').select('*').single();
-          if (data && !error) setProfileData(data);
+          if (data && !error) {
+            setProfileData(data);
+            localStorage.setItem('mock_profile', JSON.stringify(data));
+          } else {
+            setProfileData(getMockProfile());
+          }
         };
         fetchProfile();
       } else if (activeTab === 'messages') {
@@ -83,11 +91,22 @@ export default function AdminDashboard({ session }: { session: any }) {
                     activeTab === 'blogs' ? 'blogs' : 'achievements';
         const fetchData = async () => {
           const { data, error } = await supabase.from(table).select('*').order('created_at', { ascending: false });
-          if (data && !error) setListData(data);
+          if (data && !error && data.length > 0) {
+            setListData(data);
+          } else {
+            const key = `mock_${activeTab}`;
+            const defaultData = activeTab === 'experiences' ? mockExperiences : 
+                              activeTab === 'portfolio' ? mockPortfolioItems : 
+                              activeTab === 'achievements' ? mockAchievements : 
+                              activeTab === 'reviews' ? mockReviews : 
+                              activeTab === 'blogs' ? mockBlogs : [];
+            setListData(getMockData(key, defaultData));
+          }
         };
         fetchData();
       }
     }
+    setEditingItemId(null);
   }, [activeTab]);
 
   const handleLogout = async () => {
@@ -127,6 +146,7 @@ export default function AdminDashboard({ session }: { session: any }) {
           console.error('Error saving profile:', error);
           showNotification('Failed to save to database. Check console.', 'error');
         } else {
+          localStorage.setItem('mock_profile', JSON.stringify(payload));
           showNotification('Profile saved to database successfully!');
         }
       }
@@ -154,13 +174,58 @@ export default function AdminDashboard({ session }: { session: any }) {
       // So we map them out and insert if they are just timestamps.
       
       const toUpsert = listData.map(item => {
-        let cleanedItem = { ...item };
-        // Strip out fields that aren't in Supabase to avoid errors
+        let cleanedItem: any = { id: item.id };
+        
+        // Only include fields that actually belong to the table for the activeTab
         if (activeTab === 'experiences') {
-          delete cleanedItem.title;
+          cleanedItem = {
+            ...cleanedItem,
+            company_institution: item.company_institution,
+            role: item.role,
+            status: item.status,
+            type: item.type,
+            description: item.description,
+            bullet_points: item.bullet_points,
+            date_range: item.date_range,
+            image_url: item.image_url
+          };
+        } else if (activeTab === 'portfolio') {
+          cleanedItem = {
+            ...cleanedItem,
+            title: item.title,
+            category: item.category,
+            description: item.description,
+            image_url: item.image_url,
+            link: item.link
+          };
+        } else if (activeTab === 'achievements') {
+          cleanedItem = {
+            ...cleanedItem,
+            title: item.title,
+            date: item.date,
+            description: item.description,
+            image_url: item.image_url,
+            full_story_link: item.full_story_link,
+            author: item.author
+          };
+        } else if (activeTab === 'blogs') {
+          cleanedItem = {
+            ...cleanedItem,
+            title: item.title,
+            content: item.content,
+            image_url: item.image_url,
+            published_at: item.published_at
+          };
         } else if (activeTab === 'reviews') {
-          delete cleanedItem.title;
-          delete cleanedItem.company_institution;
+          cleanedItem = {
+            ...cleanedItem,
+            name: item.name,
+            avatar_url: item.avatar_url,
+            country_flag: item.country_flag,
+            rating: item.rating,
+            service_taken: item.service_taken,
+            text: item.text
+          };
         }
         
         // If id is a timestamp string (created locally), let Supabase generate UUID by omitting id
@@ -199,6 +264,7 @@ export default function AdminDashboard({ session }: { session: any }) {
         showNotification(`Failed to save: ${errorMessage || 'See console.'}`, 'error');
       } else {
         showNotification(`${activeTab} saved to database successfully!`);
+        setEditingItemId(null);
         // Refresh to get new UUIDs
         if (activeTab === 'experiences') {
           const { data } = await supabase.from('experiences').select('*').order('created_at', { ascending: false });
@@ -230,6 +296,7 @@ export default function AdminDashboard({ session }: { session: any }) {
                   activeTab === 'blogs' ? { id: Date.now().toString(), title: '', published_at: new Date().toISOString() } :
                   { id: Date.now().toString(), title: '', date: new Date().toISOString() };
     setListData([{...newItem}, ...listData]);
+    setEditingItemId(newItem.id);
   };
 
   const deleteItem = async (id: string) => {
@@ -250,7 +317,7 @@ export default function AdminDashboard({ session }: { session: any }) {
   const [uploadingStates, setUploadingStates] = useState<Record<string, boolean>>({});
 
   const updateItem = (id: string, field: string, value: any) => {
-    setListData(listData.map(item => item.id === id ? { ...item, [field]: value } : item));
+    setListData(prevList => prevList.map(item => item.id === id ? { ...item, [field]: value } : item));
   };
 
   const handleProfileUpload = async (e: React.ChangeEvent<HTMLInputElement>, field: 'avatar_url' | 'resume_url') => {
@@ -320,7 +387,7 @@ export default function AdminDashboard({ session }: { session: any }) {
         <div>
           <label className="block text-sm font-bold text-blue-400 mb-2 uppercase tracking-wide">Upload Avatar Image</label>
           <div className="flex items-center gap-3">
-            <img src={profileData.avatar_url || "/hasinur_profile_pic_design_in_ps.png"} alt="Avatar" className="w-12 h-12 rounded-full object-cover border-2 border-blue-500 bg-slate-800" />
+            <img src={profileData.avatar_url || `/hasinur_profile_pic_design_in_ps.png`} alt="Avatar" className="w-12 h-12 rounded-full object-cover border-2 border-blue-500 bg-slate-800" />
             <span className="flex-1 w-full bg-slate-900/80 border border-blue-500/30 rounded-xl px-4 py-3 text-white/50 text-sm italic font-medium">Upload an image below to replace</span>
             <label className="flex-shrink-0 cursor-pointer bg-slate-800 hover:bg-slate-700 p-3 rounded-xl border border-white/10 transition-colors">
               {uploadingStates['avatar_url'] ? <span className="text-sm text-blue-400 animate-pulse">Uploading...</span> : <Upload size={20} className="text-blue-400" />}
@@ -487,10 +554,10 @@ export default function AdminDashboard({ session }: { session: any }) {
           <div key={item.id} className="bg-slate-800/30 border border-white/5 p-4 rounded-xl space-y-4">
             <div className="flex justify-between gap-4">
               {activeTab === 'experiences' ? (
-                <div className="flex-1 text-white font-bold px-3 py-2 bg-slate-900/50 rounded-lg border border-white/5 line-clamp-1">Experience Entry</div>
+                <div className="flex-1 text-white font-bold px-3 py-2 bg-slate-900/50 rounded-lg border border-white/5 line-clamp-1">{item.company_institution || 'Experience Entry'}</div>
               ) : activeTab === 'reviews' ? (
-                <div className="flex-1 text-white font-bold px-3 py-2 bg-slate-900/50 rounded-lg border border-white/5 line-clamp-1">Client Review</div>
-              ) : (
+                <div className="flex-1 text-white font-bold px-3 py-2 bg-slate-900/50 rounded-lg border border-white/5 line-clamp-1">{item.name || 'Client Review'}</div>
+              ) : editingItemId === item.id ? (
                 <input 
                   type="text" 
                   value={item.title || ''} 
@@ -498,12 +565,19 @@ export default function AdminDashboard({ session }: { session: any }) {
                   placeholder="Title"
                   className="flex-1 bg-slate-900/50 border border-white/10 rounded-lg px-3 py-2 text-white text-sm"
                 />
+              ) : (
+                <div className="flex-1 text-white font-bold px-3 py-2 bg-slate-900/50 rounded-lg border border-white/5 line-clamp-1">{item.title || 'Untitled'}</div>
               )}
-              <button type="button" onClick={() => deleteItem(item.id)} className="text-red-400 hover:text-red-300 p-2">
-                <Trash2 size={18} />
-              </button>
+              <div className="flex gap-2">
+                <button type="button" onClick={() => editingItemId === item.id ? setEditingItemId(null) : setEditingItemId(item.id)} className="text-blue-400 hover:text-blue-300 p-2 text-sm font-medium">
+                  {editingItemId === item.id ? 'Close' : 'Edit'}
+                </button>
+                <button type="button" onClick={() => deleteItem(item.id)} className="text-red-400 hover:text-red-300 p-2">
+                  <Trash2 size={18} />
+                </button>
+              </div>
             </div>
-            {activeTab === 'portfolio' && (
+            {activeTab === 'portfolio' && editingItemId === item.id && (
               <div className="grid grid-cols-1 gap-4">
                 <input type="text" value={item.link || ''} onChange={e => updateItem(item.id, 'link', e.target.value)} placeholder="Live Website Preview URL (e.g., https://my-site.com)" className="bg-slate-900/50 border border-white/10 rounded-lg px-3 py-2 text-white text-sm" />
                 <div className="flex gap-4">
@@ -523,9 +597,12 @@ export default function AdminDashboard({ session }: { session: any }) {
                     <input type="file" accept="image/*" disabled={uploadingStates[`${item.id}_image_url`]} onChange={(e) => handleListUpload(e, item.id, 'image_url')} className="hidden" />
                   </label>
                 </div>
+                {item.category === 'projects' && (
+                  <JoditEditor value={item.description || ''} config={editorConfig} onBlur={newContent => updateItem(item.id, 'description', newContent)} />
+                )}
               </div>
             )}
-            {activeTab === 'achievements' && (
+            {activeTab === 'achievements' && editingItemId === item.id && (
               <div className="grid grid-cols-1 gap-4">
                 <input type="text" value={item.full_story_link || ''} onChange={e => updateItem(item.id, 'full_story_link', e.target.value)} placeholder="Certificate Link URL" className="bg-slate-900/50 border border-white/10 rounded-lg px-3 py-2 text-white text-sm" />
                 <div className="flex gap-4">
@@ -543,7 +620,7 @@ export default function AdminDashboard({ session }: { session: any }) {
                 <JoditEditor value={item.description || ''} config={editorConfig} onBlur={newContent => updateItem(item.id, 'description', newContent)} />
               </div>
             )}
-            {activeTab === 'blogs' && (
+            {activeTab === 'blogs' && editingItemId === item.id && (
               <div className="grid grid-cols-1 gap-4">
                 <div className="flex gap-4">
                   <input type="date" value={item.published_at ? item.published_at.split('T')[0] : ''} onChange={e => updateItem(item.id, 'published_at', new Date(e.target.value).toISOString())} className="bg-slate-900/50 border border-white/10 rounded-lg px-3 py-2 text-white text-sm flex-1" />
@@ -560,7 +637,7 @@ export default function AdminDashboard({ session }: { session: any }) {
                 <JoditEditor value={item.content || ''} config={editorConfig} onBlur={newContent => updateItem(item.id, 'content', newContent)} />
               </div>
             )}
-            {activeTab === 'experiences' && (
+            {activeTab === 'experiences' && editingItemId === item.id && (
               <div className="grid grid-cols-1 gap-4">
                 <div className="flex gap-4">
                   <input type="text" value={item.role || ''} onChange={e => updateItem(item.id, 'role', e.target.value)} placeholder="Role (e.g. Lead Developer)" className="bg-slate-900/50 border border-white/10 rounded-lg px-3 py-2 text-white text-sm flex-1" />
@@ -572,7 +649,35 @@ export default function AdminDashboard({ session }: { session: any }) {
                     <option value="education">Education</option>
                     <option value="creative">Creative</option>
                   </select>
-                  <input type="text" value={item.date_range || ''} onChange={e => updateItem(item.id, 'date_range', e.target.value)} placeholder="Date Range" className="bg-slate-900/50 border border-white/10 rounded-lg px-3 py-2 text-white text-sm flex-1" />
+                  <div className="flex flex-1 items-center gap-2">
+                    <input 
+                        type="date" 
+                        value={item.date_range?.split(' to ')[0] || item.date_range?.split(' - ')[0] || ''} 
+                        onChange={e => updateItem(item.id, 'date_range', `${e.target.value} to ${item.date_range?.split(' to ')[1] || item.date_range?.split(' - ')[1] || 'Present'}`)} 
+                        className="bg-slate-900/50 border border-white/10 rounded-lg px-2 py-2 text-white text-sm w-1/2" 
+                        title="Start Date"
+                    />
+                    <span className="text-white/50 text-xs text-center">to</span>
+                    <div className="flex w-1/2 items-center gap-2">
+                      <input 
+                          type="date" 
+                          value={(item.date_range?.split(' to ')[1] === 'Present' || item.date_range?.split(' - ')[1] === 'Present' || !item.date_range) ? '' : (item.date_range?.split(' to ')[1] || item.date_range?.split(' - ')[1] || '')} 
+                          onChange={e => updateItem(item.id, 'date_range', `${item.date_range?.split(' to ')[0] || item.date_range?.split(' - ')[0] || ''} to ${e.target.value || 'Present'}`)} 
+                          disabled={item.date_range?.endsWith('Present')}
+                          className="bg-slate-900/50 border border-white/10 rounded-lg px-2 py-2 text-white text-sm w-full disabled:opacity-30 disabled:cursor-not-allowed" 
+                          title="End Date"
+                      />
+                      <label className="flex items-center gap-1 text-xs text-slate-300 shrink-0 cursor-pointer">
+                        <input 
+                            type="checkbox" 
+                            checked={item.date_range?.endsWith('Present')} 
+                            onChange={e => updateItem(item.id, 'date_range', `${item.date_range?.split(' to ')[0] || item.date_range?.split(' - ')[0] || ''} to ${e.target.checked ? 'Present' : ''}`)} 
+                            className="rounded border-none outline-none accent-blue-500" 
+                        />
+                        Present
+                      </label>
+                    </div>
+                  </div>
                   <label className="group w-32 cursor-pointer bg-slate-800 hover:bg-slate-700 p-2 rounded-lg border border-white/10 transition-colors flex items-center justify-center gap-2">
                     {uploadingStates[`${item.id}_image_url`] ? <span className="text-sm text-blue-400 animate-pulse">Wait...</span> : (
                       <>
@@ -586,15 +691,48 @@ export default function AdminDashboard({ session }: { session: any }) {
                 <JoditEditor value={item.description || ''} config={editorConfig} onBlur={newContent => updateItem(item.id, 'description', newContent)} />
               </div>
             )}
-            {activeTab === 'reviews' && (
+            {activeTab === 'reviews' && editingItemId === item.id && (
               <div className="grid grid-cols-1 gap-4">
                 <div className="flex gap-4">
                   <input type="text" value={item.name || ''} onChange={e => updateItem(item.id, 'name', e.target.value)} placeholder="Client Name" className="bg-slate-900/50 border border-white/10 rounded-lg px-3 py-2 text-white text-sm flex-1" />
                   <input type="text" value={item.service_taken || ''} onChange={e => updateItem(item.id, 'service_taken', e.target.value)} placeholder="Service Taken (e.g. SEO Optimization)" className="bg-slate-900/50 border border-white/10 rounded-lg px-3 py-2 text-white text-sm flex-1" />
                 </div>
                 <div className="flex gap-4">
-                  <input type="number" min="1" max="5" value={item.rating || 5} onChange={e => updateItem(item.id, 'rating', parseInt(e.target.value))} placeholder="Rating (1-5)" className="bg-slate-900/50 border border-white/10 rounded-lg px-3 py-2 text-white text-sm flex-1" />
-                  <input type="text" value={item.country_flag || ''} onChange={e => updateItem(item.id, 'country_flag', e.target.value)} placeholder="Country Flag Emoji (e.g. 🇺🇸)" className="bg-slate-900/50 border border-white/10 rounded-lg px-3 py-2 text-white text-sm flex-1" />
+                  <input type="number" min="1" max="5" step="0.1" value={item.rating || 5} onChange={e => {
+                    const val = parseFloat(e.target.value);
+                    if (!isNaN(val)) updateItem(item.id, 'rating', val);
+                  }} placeholder="Rating (1-5)" className="bg-slate-900/50 border border-white/10 rounded-lg px-3 py-2 text-white text-sm flex-1" />
+                  <div className="flex-1 flex gap-2">
+                    <select 
+                      value={['🇺🇸','🇬🇧','🇨🇦','🇦🇺','🇩🇪','🇫🇷','🇮🇳','🇧🇩','🇦🇪','🇸🇦'].includes(item.country_flag) ? item.country_flag : (item.country_flag ? 'custom' : '')} 
+                      onChange={e => {
+                        if (e.target.value !== 'custom') {
+                          updateItem(item.id, 'country_flag', e.target.value)
+                        }
+                      }} 
+                      className="bg-slate-900/50 border border-white/10 rounded-lg px-2 text-white text-sm w-20"
+                    >
+                      <option value="">None</option>
+                      <option value="🇺🇸">🇺🇸 USA</option>
+                      <option value="🇬🇧">🇬🇧 UK</option>
+                      <option value="🇨🇦">🇨🇦 CAN</option>
+                      <option value="🇦🇺">🇦🇺 AUS</option>
+                      <option value="🇩🇪">🇩🇪 GER</option>
+                      <option value="🇫🇷">🇫🇷 FRA</option>
+                      <option value="🇮🇳">🇮🇳 IND</option>
+                      <option value="🇧🇩">🇧🇩 BAN</option>
+                      <option value="🇦🇪">🇦🇪 UAE</option>
+                      <option value="🇸🇦">🇸🇦 KSA</option>
+                      <option value="custom">Custom(URL)</option>
+                    </select>
+                    <input 
+                      type="text" 
+                      value={item.country_flag || ''} 
+                      onChange={e => updateItem(item.id, 'country_flag', e.target.value)} 
+                      placeholder="Or Paste URL/Emoji" 
+                      className="bg-slate-900/50 border border-white/10 rounded-lg px-3 py-2 text-white text-sm flex-1" 
+                    />
+                  </div>
                   <label className="group flex-1 cursor-pointer bg-slate-800 hover:bg-slate-700 p-2 rounded-lg border border-white/10 transition-colors flex items-center justify-center gap-2">
                     {uploadingStates[`${item.id}_avatar_url`] ? <span className="text-sm text-blue-400 animate-pulse">Uploading...</span> : (
                       <>
