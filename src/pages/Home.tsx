@@ -40,7 +40,7 @@ export default function Home() {
       } catch (e) {
         console.error('Title fetch error:', e);
       }
-      document.title = displayName === 'Portfolio' ? 'Hasinur' : `${displayName} | Hasinur`;
+      document.title = displayName === 'Portfolio' ? 'S M Hasinur Rahman' : `${displayName} | S M Hasinur Rahman`;
     };
     fetchTitle();
   }, [location.pathname]);

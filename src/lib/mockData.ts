@@ -5,7 +5,7 @@ export const defaultMockProfile = {
   email: "hasinurrahman.me@gmail.com",
   phone: "+8801518914773",
   location: "Dhaka, Bangladesh",
-  avatar_url: "",
+  avatar_url: "https://jtcepxgoqbyfwljezndt.supabase.co/storage/v1/object/public/portfolio_assets/hasinur_profile_pic_design_in_ps.png",
   resume_url: "#",
   facebook_url: "https://facebook.com/hasinur01",
   instagram_url: "https://instagram.com/hasinur_rahman",

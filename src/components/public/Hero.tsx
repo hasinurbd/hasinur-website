@@ -55,7 +55,7 @@ export default function Hero() {
             className="relative w-32 h-32 md:w-40 md:h-40 rounded-full overflow-hidden border-4 border-slate-900 shadow-2xl bg-slate-800 select-none group"
           >
             <img 
-              src={profile.avatar_url && profile.avatar_url.length > 5 ? profile.avatar_url : "https://api.dicebear.com/7.x/avataaars/svg?seed=Hasinur"} 
+              src={profile.avatar_url && profile.avatar_url.length > 5 ? profile.avatar_url : "https://jtcepxgoqbyfwljezndt.supabase.co/storage/v1/object/public/portfolio_assets/hasinur_profile_pic_design_in_ps.png"} 
               alt={profile.name} 
               draggable={false}
               className="w-full h-full object-cover grayscale-[20%] group-hover:grayscale-0 transition-all duration-500 pointer-events-none"
