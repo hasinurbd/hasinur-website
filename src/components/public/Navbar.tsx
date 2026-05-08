@@ -129,7 +129,7 @@ export default function Navbar() {
                 <img src={avatarUrl && avatarUrl.length > 5 && !avatarUrl.includes('dicebear') ? avatarUrl : "https://jtcepxgoqbyfwljezndt.supabase.co/storage/v1/object/public/portfolio_assets/hasinur_profile_pic_design_in_ps.png"} alt="Profile" className="w-full h-full object-cover" />
               </div>
               <div className="flex flex-col">
-                <span className="text-2xl font-black tracking-tighter text-white">HASINUR</span>
+                <span className="text-2xl font-black tracking-tighter text-white">S M Hasinur Rahman</span>
                 <span className="text-xs font-black tracking-tighter text-blue-500 uppercase">CSE @ UIU • Full-Stack Developer</span>
               </div>
             </div>
