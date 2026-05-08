@@ -26,22 +26,46 @@ export default function Home() {
   useEffect(() => {
     const fetchTitle = async () => {
       let displayName = 'Portfolio';
-      if (hasSupabaseConfig) {
-        const { data, error } = await supabase.from('profile_info').select('name').single();
-        if (data && !error && data.name) {
-          displayName = data.name;
+      try {
+        if (hasSupabaseConfig) {
+          const { data } = await supabase.from('profile_info').select('name').single();
+          if (data?.name) displayName = data.name;
+        } else {
+          const saved = localStorage.getItem('mock_profile');
+          if (saved) {
+             const profile = JSON.parse(saved);
+             if (profile.name) displayName = profile.name;
+          }
         }
-      } else {
-        const saved = localStorage.getItem('mockProfile');
-        if (saved) {
-           const profile = JSON.parse(saved);
-           if (profile.name) displayName = profile.name;
-        }
+      } catch (e) {
+        console.error('Title fetch error:', e);
       }
       document.title = `${displayName} | Portfolio`;
     };
     fetchTitle();
   }, [location.pathname]);
+
+  useEffect(() => {
+    const incrementViews = async () => {
+      try {
+        if (hasSupabaseConfig) {
+          const { data: currentData } = await supabase.from('site_stats').select('views').eq('id', 'global').maybeSingle();
+          if (currentData) {
+            await supabase.from('site_stats').update({ views: (currentData.views || 100000) + 1 }).eq('id', 'global');
+          } else {
+            await supabase.from('site_stats').insert([{ id: 'global', views: 100001 }]);
+          }
+        } else {
+          const saved = localStorage.getItem('mockViews');
+          const current = saved ? parseInt(saved) : 100000;
+          localStorage.setItem('mockViews', (current + 1).toString());
+        }
+      } catch (e) {
+        // Silent error for view counting
+      }
+    };
+    incrementViews();
+  }, []);
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-200 font-sans selection:bg-blue-500/30">

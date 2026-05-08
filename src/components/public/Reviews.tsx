@@ -6,7 +6,7 @@ import { Star, Quote, MessageSquare, StarHalf } from 'lucide-react';
 import { BackgroundBlobs, FloatingIcon } from './VisualElements';
 
 export default function Reviews() {
-  const [reviews, setReviews] = useState<any[]>(() => hasSupabaseConfig ? [] : getMockData('mock_reviews', defaultMockReviews));
+  const [reviews, setReviews] = useState<any[]>(() => getMockData('mock_reviews', defaultMockReviews));
   
   useEffect(() => {
     if (hasSupabaseConfig) {
@@ -90,13 +90,20 @@ export default function Reviews() {
                 <div>
                   <h4 className="text-white font-bold flex items-center gap-2">
                     {review.name}
-                    <span className="text-lg flex items-center" title="Client Location/Company">
-                      {review.country_flag?.startsWith('http') ? (
-                        <img src={review.country_flag} alt="Client Logo" className="h-5 object-contain rounded-sm" />
-                      ) : (
-                        review.country_flag
-                      )}
-                    </span>
+                    {review.country_flag && (
+                      <span className="text-lg flex items-center" title="Client Location/Company">
+                        {review.country_flag.startsWith('http') ? (
+                          <img 
+                            src={review.country_flag} 
+                            alt="Client Logo" 
+                            className="h-5 object-contain rounded-sm"
+                            onError={(e) => (e.currentTarget.style.display = 'none')}
+                          />
+                        ) : (
+                          review.country_flag
+                        )}
+                      </span>
+                    )}
                   </h4>
                   <p className="text-sm text-blue-400/80">{review.service_taken}</p>
                 </div>

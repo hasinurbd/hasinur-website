@@ -10,6 +10,13 @@ html, body {
   font-family: var(--font-sans);
   overflow-x: hidden;
   max-width: 100%;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+input, textarea, [contenteditable="true"], .jodit-wysiwyg, .jodit-container {
+  user-select: text !important;
+  -webkit-user-select: text !important;
 }
 
 /* Fix Jodit text colors inside admin panel */

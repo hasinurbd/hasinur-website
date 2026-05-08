@@ -5,7 +5,7 @@ import { ArrowRight, Award, FileText } from 'lucide-react';
 import { BackgroundBlobs, FloatingIcon } from './VisualElements';
 
 export default function Achievements() {
-  const [achievements, setAchievements] = useState(() => hasSupabaseConfig ? [] : getMockData('mock_achievements', defaultAchievements));
+  const [achievements, setAchievements] = useState(() => getMockData('mock_achievements', defaultAchievements));
 
   useEffect(() => {
     if (hasSupabaseConfig) {
@@ -27,7 +27,7 @@ export default function Achievements() {
   };
 
   return (
-    <section id="achievements" className="relative py-24 px-4 overflow-hidden">
+    <section id="achievements" className="relative py-16 px-4 overflow-hidden">
       <BackgroundBlobs />
       
       <div className="absolute inset-0 pointer-events-none">
@@ -36,37 +36,44 @@ export default function Achievements() {
       </div>
 
       <div className="max-w-6xl mx-auto relative z-10">
-        <div className="text-center mb-16">
-          <h2 className="text-4xl md:text-5xl font-black mb-6 tracking-tight text-white">Achievements & Certifications</h2>
-          <div className="w-24 h-1 bg-gradient-to-r from-blue-600 to-indigo-500 mx-auto rounded-full"></div>
+        <div className="text-center mb-10">
+          <span className="text-blue-500 font-bold tracking-[0.3em] uppercase text-[9px] mb-2 block">Recognition</span>
+          <h2 className="text-2xl md:text-3xl font-black mb-3 tracking-tight text-white uppercase">Accomplishments</h2>
+          <div className="w-10 h-0.5 bg-gradient-to-r from-blue-600 to-indigo-500 mx-auto rounded-full shadow-[0_0_10px_rgba(37,99,235,0.3)]"></div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
           {achievements.map(ach => (
-            <div key={ach.id} className="bg-slate-800/40 border border-white/5 rounded-2xl overflow-hidden hover:bg-slate-800/80 transition-colors group flex flex-col h-full">
-              <div className="h-48 overflow-hidden relative">
-                <img src={ach.image_url} alt={ach.title} loading="lazy" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
+            <div key={ach.id} className="bg-slate-800/40 border border-white/5 rounded-3xl overflow-hidden hover:bg-slate-800/80 hover:border-blue-500/30 transition-all group flex flex-col h-full shadow-lg">
+              <div className="h-44 overflow-hidden relative bg-slate-800 flex items-center justify-center">
+                {ach.image_url ? (
+                  <img src={ach.image_url} alt={ach.title} loading="lazy" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
+                ) : (
+                  <span className="text-slate-600 font-medium text-xs">No Image</span>
+                )}
                 <div className="absolute inset-0 bg-blue-900/20 mix-blend-overlay group-hover:opacity-0 transition-opacity"></div>
               </div>
               
-              <div className="p-6 flex flex-col flex-grow">
-                <div className="text-xs font-bold tracking-widest text-slate-400 mb-3 uppercase">
-                  <span className="text-blue-400">{formatDate(ach.date)}</span> • {ach.author}
+              <div className="p-5 flex flex-col flex-grow">
+                <div className="text-[10px] font-bold tracking-widest text-slate-400 mb-2 uppercase flex items-center gap-2">
+                  <span className="text-blue-400">{formatDate(ach.date)}</span>
+                  <span className="w-1 h-1 bg-slate-600 rounded-full"></span>
+                  <span>{ach.author}</span>
                 </div>
                 
-                <h3 className="text-xl font-bold italic mb-3 text-white leading-snug group-hover:text-blue-300 transition-colors">
+                <h3 className="text-lg font-bold mb-3 text-white leading-snug group-hover:text-blue-300 transition-colors line-clamp-2">
                   {ach.title}
                 </h3>
                 
-                <div className="text-slate-400 text-sm mb-6 line-clamp-3 leading-relaxed flex-grow max-w-none [&_ul]:list-disc [&_ul]:ml-5 [&_ol]:list-decimal [&_ol]:ml-5 [&_p]:mb-2" dangerouslySetInnerHTML={{ __html: ach.description }} />
+                <div className="text-slate-400 text-sm mb-6 line-clamp-2 leading-relaxed flex-grow max-w-none [&_ul]:list-disc [&_ul]:ml-5 [&_ol]:list-decimal [&_ol]:ml-5 [&_p]:mb-2" dangerouslySetInnerHTML={{ __html: ach.description }} />
                 
                 {ach.full_story_link && ach.full_story_link !== '#' && ach.full_story_link !== '' ? (
-                  <a href={ach.full_story_link} target="_blank" rel="noopener noreferrer" className="inline-flex items-center text-sm font-bold text-white hover:text-blue-400 transition-colors tracking-wide mt-auto">
-                    VIEW CERTIFICATE <ArrowRight size={16} className="ml-2 transition-transform group-hover:translate-x-1" />
+                  <a href={ach.full_story_link} target="_blank" rel="noopener noreferrer" className="inline-flex items-center text-xs font-black text-white hover:text-blue-400 transition-colors tracking-widest mt-auto uppercase">
+                    VIEW CERTIFICATE <ArrowRight size={14} className="ml-2 transition-transform group-hover:translate-x-1" />
                   </a>
                 ) : (
-                  <button onClick={(e) => e.preventDefault()} className="inline-flex items-center text-sm font-bold text-slate-500 tracking-wide mt-auto">
-                    ACHIEVEMENT UNLOCKED
+                  <button onClick={(e) => e.preventDefault()} className="inline-flex items-center text-xs font-black text-slate-500 tracking-widest mt-auto uppercase">
+                    LOCKED
                   </button>
                 )}
               </div>

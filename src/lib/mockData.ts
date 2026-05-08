@@ -1,12 +1,19 @@
 export const defaultMockProfile = {
   name: "S M Hasinur Rahman",
-  title: "Content Writing",
-  bio: "Creative Content Writing specialist dedicated to crafting compelling stories and building digital presence. I am currently a CSE Undergraduate at UIU with a passion for creative solutions.",
+  title: "Creative Designer & Full Stack Developer",
+  bio: "Creative Designer & Full Stack Developer specializing in graphic design, digital branding, and modern web development. Currently a CSE Undergraduate at UIU, merging technical expertise with artistic vision.",
   email: "hasinurrahman.me@gmail.com",
   phone: "+8801518914773",
   location: "Dhaka, Bangladesh",
   avatar_url: "",
   resume_url: "#",
+  facebook_url: "https://facebook.com/hasinur01",
+  instagram_url: "https://instagram.com/hasinur_rahman",
+  linkedin_url: "https://linkedin.com/in/hasinurbd",
+  github_url: "https://github.com/hasinurbd",
+  behance_url: "https://behance.net/hasinurbd",
+  twitter_url: "https://twitter.com/hasinurbd",
+  youtube_url: "https://youtube.com/@hasinurbd",
 };
 
 export const getMockData = (key: string, defaultValue: any) => {
@@ -52,7 +59,7 @@ export const mockExperiences = [
     company_institution: "ACS",
     role: "Response Team Member & Designer",
     status: "Former",
-    type: "creative",
+    type: "club",
     description: "",
     bullet_points: [],
     date_range: ""
@@ -62,7 +69,7 @@ export const mockExperiences = [
     company_institution: "Clienteno",
     role: "Hr & Graphics Designer",
     status: "Former",
-    type: "creative",
+    type: "club",
     description: "",
     bullet_points: [],
     date_range: ""

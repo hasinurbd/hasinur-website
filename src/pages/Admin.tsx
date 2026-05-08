@@ -32,46 +32,16 @@ export default function Admin() {
     setError('');
 
     if (hasSupabaseConfig) {
-      let { error: authError } = await supabase.auth.signInWithPassword({
+      const { error: authError } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
-
-      if (authError && authError.message.includes('Invalid login credentials') && email.toLowerCase() === 'hasinurrahman.me@gmail.com') {
-        console.log('Attempting auto-signup since account might not exist yet...');
-        const { error: signUpError } = await supabase.auth.signUp({
-          email,
-          password,
-        });
-        if (!signUpError) {
-          // Retry sign in
-          const { error: retryError } = await supabase.auth.signInWithPassword({ email, password });
-          authError = retryError;
-        } else {
-          authError = signUpError;
-        }
-      }
 
       if (authError) {
         setError(authError.message);
       }
     } else {
-      // Mock login for demo purposes
-      console.log('Attempting mock login with:', email, password);
-      setTimeout(() => {
-        const inputEmail = email.trim().toLowerCase();
-        const inputPassword = password.trim();
-        const targetEmail = 'hasinurrahman.me@gmail.com'.toLowerCase();
-        const targetPassword = 'Hasi12@adev';
-        
-        if (inputEmail === targetEmail && inputPassword === targetPassword) {
-          setSession({ user: { email: inputEmail } });
-        } else {
-          setError(`Invalid credentials. Please use: ${targetEmail} / ${targetPassword}`);
-        }
-        setLoading(false);
-      }, 600);
-      return;
+      setError('System Error: Database connection not configured. Please build the application with Supabase environment variables.');
     }
     setLoading(false);
   };

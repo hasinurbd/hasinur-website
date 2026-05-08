@@ -39,27 +39,31 @@ export default function FloatingChat() {
     setIsLoading(true);
 
     try {
-      // Simulate typing delay
-      await new Promise(resolve => setTimeout(resolve, 800));
+      // Simulate typing delay based on message length
+      const delay = Math.min(2000, 400 + userMessage.length * 10);
+      await new Promise(resolve => setTimeout(resolve, delay));
       
       const lowerInput = userMessage.toLowerCase();
       let bestMatch = "I'm sorry, I don't have an answer for that right now. Please use the contact form to reach S M Hasinur directly!";
       
-      // Super simple keyword matching
-      if (lowerInput.includes('skill') || lowerInput.includes('know') || lowerInput.includes('can you do')) {
+      // Simple intent classification
+      if (lowerInput.includes('skill') || lowerInput.includes('know') || lowerInput.includes('can you do') || lowerInput.includes('expert')) {
         bestMatch = faqs.find(f => f.q.includes('skills'))?.a || bestMatch;
-      } else if (lowerInput.includes('contact') || lowerInput.includes('email') || lowerInput.includes('phone') || lowerInput.includes('reach')) {
+      } else if (lowerInput.includes('contact') || lowerInput.includes('email') || lowerInput.includes('phone') || lowerInput.includes('reach') || lowerInput.includes('hire')) {
         bestMatch = faqs.find(f => f.q.includes('contact'))?.a || bestMatch;
-      } else if (lowerInput.includes('project') || lowerInput.includes('portfolio') || lowerInput.includes('work')) {
+      } else if (lowerInput.includes('project') || lowerInput.includes('portfolio') || lowerInput.includes('work') || lowerInput.includes('built')) {
         bestMatch = faqs.find(f => f.q.includes('projects'))?.a || bestMatch;
-      } else if (lowerInput.includes('resume') || lowerInput.includes('cv')) {
+      } else if (lowerInput.includes('resume') || lowerInput.includes('cv') || lowerInput.includes('pdf')) {
         bestMatch = faqs.find(f => f.q.includes('resume'))?.a || bestMatch;
-      } else if (lowerInput.includes('location') || lowerInput.includes('where')) {
+      } else if (lowerInput.includes('location') || lowerInput.includes('where') || lowerInput.includes('live')) {
         bestMatch = faqs.find(f => f.q.includes('located'))?.a || bestMatch;
-      } else if (lowerInput.includes('hello') || lowerInput.includes('hi ') || lowerInput.includes('hey')) {
-        bestMatch = "Hello! Ask me about Hasinur's work, skills, or how to contact him.";
-      } else if (lowerInput.includes('what do you do') || lowerInput.includes('role') || lowerInput.includes('job')) {
+      } else if (lowerInput.includes('hello') || lowerInput.includes('hi ') || lowerInput.includes('hey') || lowerInput.startsWith('hi')) {
+        const greetings = ["Hello!", "Hi there!", "Hey! How can I help you today?"];
+        bestMatch = greetings[Math.floor(Math.random() * greetings.length)] + " Ask me about Hasinur's work, skills, or how to contact him.";
+      } else if (lowerInput.includes('what do you do') || lowerInput.includes('role') || lowerInput.includes('job') || lowerInput.includes('profession')) {
         bestMatch = faqs.find(f => f.q.includes('role') || f.q.includes('do you do'))?.a || bestMatch;
+      } else if (lowerInput.includes('thanks') || lowerInput.includes('thank you')) {
+        bestMatch = "You're very welcome! Feel free to ask anything else.";
       }
 
       setMessages(prev => [...prev, { role: 'model', content: bestMatch }]);

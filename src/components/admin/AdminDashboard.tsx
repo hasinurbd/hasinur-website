@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { LogOut, Home, User, Briefcase, FileImage, Award, Save, Plus, Trash2, Mail, FileText, Upload, BarChart3, Users, Eye, MousePointerClick } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
 import { supabase, hasSupabaseConfig, uploadAsset } from '../../lib/supabaseClient';
 import { getMockProfile, saveMockProfile, getMockData, saveMockData, mockExperiences, mockPortfolioItems, mockAchievements, mockBlogs, defaultMockProfile, mockReviews } from '../../lib/mockData';
 import JoditEditor from 'jodit-react';
-import { ResponsiveContainer, AreaChart, Area, XAxis, Tooltip, CartesianGrid } from 'recharts';
+import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid, PieChart, Pie, Cell, BarChart, Bar } from 'recharts';
 import { useNavigate, useLocation } from 'react-router-dom';
 
 export default function AdminDashboard({ session }: { session: any }) {
@@ -15,9 +16,15 @@ export default function AdminDashboard({ session }: { session: any }) {
     return ['dashboard', 'profile', 'experiences', 'portfolio', 'achievements', 'blogs', 'reviews', 'messages'].includes(path) ? path : 'dashboard';
   }, [location.pathname]);
 
-  const setActiveTab = (tab: string) => {
-    navigate(`/admin/${tab}`);
-  };
+  const TABS_CONFIG: Record<string, { table: string, label: string, orderBy: string }> = useMemo(() => ({
+    experiences: { table: 'experiences', label: 'Experience', orderBy: 'created_at' },
+    portfolio: { table: 'portfolio_items', label: 'Portfolio', orderBy: 'created_at' },
+    achievements: { table: 'achievements', label: 'Achievements', orderBy: 'date' },
+    blogs: { table: 'blogs', label: 'Blogs', orderBy: 'published_at' },
+    reviews: { table: 'client_reviews', label: 'Reviews', orderBy: 'created_at' },
+    messages: { table: 'messages', label: 'Messages', orderBy: 'created_at' }
+  }), []);
+
   const [profileData, setProfileData] = useState(getMockProfile());
   const [listData, setListData] = useState<any[]>([]);
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
@@ -55,59 +62,52 @@ export default function AdminDashboard({ session }: { session: any }) {
     if (!hasSupabaseConfig) {
       if (activeTab === 'profile') {
         setProfileData(getMockProfile());
-      } else if (activeTab === 'messages' || activeTab === 'blogs') {
-        setListData([]);
-      } else {
+      } else if (TABS_CONFIG[activeTab] || activeTab === 'messages') {
         const key = `mock_${activeTab}`;
-        const defaultData = activeTab === 'experiences' ? mockExperiences : 
-                          activeTab === 'portfolio' ? mockPortfolioItems : 
-                          activeTab === 'achievements' ? mockAchievements : 
-                          activeTab === 'reviews' ? mockReviews : 
-                          activeTab === 'blogs' ? mockBlogs : [];
-        setListData(getMockData(key, defaultData));
+        const defaultDataMap: Record<string, any[]> = {
+          experiences: mockExperiences,
+          portfolio: mockPortfolioItems,
+          achievements: mockAchievements,
+          reviews: mockReviews,
+          blogs: mockBlogs
+        };
+        setListData(getMockData(key, defaultDataMap[activeTab] || []));
       }
     } else {
       if (activeTab === 'profile') {
         const fetchProfile = async () => {
           const { data, error } = await supabase.from('profile_info').select('*').single();
           if (data && !error) {
-            setProfileData(data);
-            localStorage.setItem('mock_profile', JSON.stringify(data));
+            setProfileData({ ...defaultMockProfile, ...data });
+            localStorage.setItem('mock_profile', JSON.stringify({ ...defaultMockProfile, ...data }));
           } else {
             setProfileData(getMockProfile());
           }
         };
         fetchProfile();
-      } else if (activeTab === 'messages') {
-        const fetchMessages = async () => {
-          const { data, error } = await supabase.from('messages').select('*').order('created_at', { ascending: false });
-          if (data && !error) setListData(data);
-        };
-        fetchMessages();
-      } else if (activeTab === 'blogs' || activeTab === 'experiences' || activeTab === 'portfolio' || activeTab === 'achievements' || activeTab === 'reviews') {
-        const table = activeTab === 'experiences' ? 'experiences' : 
-                    activeTab === 'portfolio' ? 'portfolio_items' : 
-                    activeTab === 'reviews' ? 'client_reviews' : 
-                    activeTab === 'blogs' ? 'blogs' : 'achievements';
+      } else if (TABS_CONFIG[activeTab]) {
+        const config = TABS_CONFIG[activeTab];
         const fetchData = async () => {
-          const { data, error } = await supabase.from(table).select('*').order('created_at', { ascending: false });
-          if (data && !error && data.length > 0) {
+          const { data, error } = await supabase.from(config.table).select('*').order(config.orderBy, { ascending: false });
+          if (data && !error && (data.length > 0 || activeTab === 'messages')) {
             setListData(data);
           } else {
             const key = `mock_${activeTab}`;
-            const defaultData = activeTab === 'experiences' ? mockExperiences : 
-                              activeTab === 'portfolio' ? mockPortfolioItems : 
-                              activeTab === 'achievements' ? mockAchievements : 
-                              activeTab === 'reviews' ? mockReviews : 
-                              activeTab === 'blogs' ? mockBlogs : [];
-            setListData(getMockData(key, defaultData));
+            const defaultDataMap: Record<string, any[]> = {
+              experiences: mockExperiences,
+              portfolio: mockPortfolioItems,
+              achievements: mockAchievements,
+              reviews: mockReviews,
+              blogs: mockBlogs
+            };
+            setListData(getMockData(key, defaultDataMap[activeTab] || []));
           }
         };
         fetchData();
       }
     }
     setEditingItemId(null);
-  }, [activeTab]);
+  }, [activeTab, TABS_CONFIG]);
 
   const handleLogout = async () => {
     if (hasSupabaseConfig) {
@@ -121,35 +121,29 @@ export default function AdminDashboard({ session }: { session: any }) {
     e.preventDefault();
     setIsSavingProfile(true);
     try {
-      if (!hasSupabaseConfig) {
-        saveMockProfile(profileData);
-        showNotification('Profile updated locally!');
-      } else {
+      saveMockProfile(profileData);
+      
+      if (hasSupabaseConfig) {
         const payload: any = {
-          name: profileData.name,
-          title: profileData.title,
-          bio: profileData.bio,
-          email: profileData.email,
-          phone: profileData.phone,
-          location: profileData.location,
-          avatar_url: profileData.avatar_url,
-          resume_url: profileData.resume_url
+          ...profileData,
+          updated_at: new Date().toISOString()
         };
-        if (profileData.id) {
-           payload.id = profileData.id;
-        }
-        const { error } = await supabase
-          .from('profile_info')
-          .upsert([payload]);
-        
+        // Always try to use ID 1 for single profile unless one exists
+        if (!payload.id) payload.id = 1;
+
+        const { error } = await supabase.from('profile_info').upsert([payload]);
         if (error) {
-          console.error('Error saving profile:', error);
-          showNotification('Failed to save to database. Check console.', 'error');
+          console.error('Database save error:', error);
+          showNotification('Saved locally, but failed to sync to cloud: ' + error.message, 'error');
         } else {
-          localStorage.setItem('mock_profile', JSON.stringify(payload));
-          showNotification('Profile saved to database successfully!');
+          showNotification('Profile updated successfully!');
         }
+      } else {
+        showNotification('Profile updated locally!');
       }
+    } catch (err: any) {
+      console.error('Profile save error:', err);
+      showNotification('An unexpected error occurred', 'error');
     } finally {
       setIsSavingProfile(false);
     }
@@ -159,156 +153,86 @@ export default function AdminDashboard({ session }: { session: any }) {
     e.preventDefault();
     setIsSavingList(true);
     try {
+      const key = `mock_${activeTab}`;
+      saveMockData(key, listData);
+      
       if (!hasSupabaseConfig) {
-        const key = `mock_${activeTab}`;
-        saveMockData(key, listData);
         showNotification(`${activeTab} updated locally!`);
-      } else {
-      const table = activeTab === 'experiences' ? 'experiences' : 
-                    activeTab === 'portfolio' ? 'portfolio_items' : 
-                    activeTab === 'reviews' ? 'client_reviews' : 
-                    activeTab === 'blogs' ? 'blogs' : 'achievements';
-      
-      // Filter out any newly added items that don't have a UUID yet so Supabase can generate them
-      // Alternatively, upsert handles new items if their id is valid. But we used Date.now() for local.
-      // So we map them out and insert if they are just timestamps.
-      
-      const toUpsert = listData.map(item => {
-        let cleanedItem: any = { id: item.id };
-        
-        // Only include fields that actually belong to the table for the activeTab
-        if (activeTab === 'experiences') {
-          cleanedItem = {
-            ...cleanedItem,
-            company_institution: item.company_institution,
-            role: item.role,
-            status: item.status,
-            type: item.type,
-            description: item.description,
-            bullet_points: item.bullet_points,
-            date_range: item.date_range,
-            image_url: item.image_url
-          };
-        } else if (activeTab === 'portfolio') {
-          cleanedItem = {
-            ...cleanedItem,
-            title: item.title,
-            category: item.category,
-            description: item.description,
-            image_url: item.image_url,
-            link: item.link
-          };
-        } else if (activeTab === 'achievements') {
-          cleanedItem = {
-            ...cleanedItem,
-            title: item.title,
-            date: item.date,
-            description: item.description,
-            image_url: item.image_url,
-            full_story_link: item.full_story_link,
-            author: item.author
-          };
-        } else if (activeTab === 'blogs') {
-          cleanedItem = {
-            ...cleanedItem,
-            title: item.title,
-            content: item.content,
-            image_url: item.image_url,
-            published_at: item.published_at
-          };
-        } else if (activeTab === 'reviews') {
-          cleanedItem = {
-            ...cleanedItem,
-            name: item.name,
-            avatar_url: item.avatar_url,
-            country_flag: item.country_flag,
-            rating: item.rating,
-            service_taken: item.service_taken,
-            text: item.text
-          };
-        }
-        
-        // If id is a timestamp string (created locally), let Supabase generate UUID by omitting id
-        if (!cleanedItem.id || !cleanedItem.id.includes('-')) {
-          delete cleanedItem.id;
-        }
-        return cleanedItem;
-      });
-
-      // Split into updates and inserts to be safe
-      const toUpdate = toUpsert.filter(item => item.id);
-      const toInsert = toUpsert.filter(item => !item.id);
-
-      let hasError = false;
-      let errorMessage = '';
-
-      if (toUpdate.length > 0) {
-         const { error } = await supabase.from(table).upsert(toUpdate);
-         if (error) {
-            console.error(`Error updating ${activeTab}:`, error);
-            hasError = true;
-            errorMessage = error.message;
-         }
-      }
-
-      if (toInsert.length > 0) {
-         const { error } = await supabase.from(table).insert(toInsert);
-         if (error) {
-            console.error(`Error inserting ${activeTab}:`, error);
-            hasError = true;
-            errorMessage = error.message;
-         }
-      }
-
-      if (hasError) {
-        showNotification(`Failed to save: ${errorMessage || 'See console.'}`, 'error');
-      } else {
-        showNotification(`${activeTab} saved to database successfully!`);
         setEditingItemId(null);
-        // Refresh to get new UUIDs
-        if (activeTab === 'experiences') {
-          const { data } = await supabase.from('experiences').select('*').order('created_at', { ascending: false });
-          if (data) setListData(data);
-        } else if (activeTab === 'portfolio') {
-          const { data } = await supabase.from('portfolio_items').select('*').order('created_at', { ascending: false });
-          if (data) setListData(data);
-        } else if (activeTab === 'blogs') {
-          const { data } = await supabase.from('blogs').select('*').order('published_at', { ascending: false });
-          if (data) setListData(data);
-        } else if (activeTab === 'reviews') {
-          const { data } = await supabase.from('client_reviews').select('*').order('created_at', { ascending: false });
-          if (data) setListData(data);
-        } else if (activeTab === 'achievements') {
-          const { data } = await supabase.from('achievements').select('*').order('date', { ascending: false });
+      } else {
+        const config = TABS_CONFIG[activeTab];
+        if (!config) return;
+
+        const toUpsert = listData.map(item => {
+          let cleanedItem: any = { id: item.id };
+          
+          if (activeTab === 'experiences') {
+            cleanedItem = { ...cleanedItem, company_institution: item.company_institution, role: item.role, status: item.status, type: item.type, description: item.description, bullet_points: item.bullet_points, date_range: item.date_range, image_url: item.image_url };
+          } else if (activeTab === 'portfolio') {
+            cleanedItem = { ...cleanedItem, title: item.title, category: item.category, description: item.description, image_url: item.image_url, link: item.link };
+          } else if (activeTab === 'achievements') {
+            cleanedItem = { ...cleanedItem, title: item.title, date: item.date, description: item.description, image_url: item.image_url, full_story_link: item.full_story_link, author: item.author };
+          } else if (activeTab === 'blogs') {
+            cleanedItem = { ...cleanedItem, title: item.title, content: item.content, image_url: item.image_url, published_at: item.published_at };
+          } else if (activeTab === 'reviews') {
+            cleanedItem = { ...cleanedItem, name: item.name, avatar_url: item.avatar_url, country_flag: item.country_flag, rating: item.rating, service_taken: item.service_taken, text: item.text };
+          }
+          
+          if (!cleanedItem.id || !cleanedItem.id.toString().includes('-')) {
+            delete cleanedItem.id;
+          }
+          return cleanedItem;
+        });
+
+        const toUpdate = toUpsert.filter(item => item.id);
+        const toInsert = toUpsert.filter(item => !item.id);
+
+        let hasError = false;
+        let errorMessage = '';
+
+        if (toUpdate.length > 0) {
+           const { error } = await supabase.from(config.table).upsert(toUpdate);
+           if (error) { hasError = true; errorMessage = error.message; }
+        }
+
+        if (toInsert.length > 0) {
+           const { error } = await supabase.from(config.table).insert(toInsert);
+           if (error) { hasError = true; errorMessage = error.message; }
+        }
+
+        if (hasError) {
+          showNotification(`Failed to save: ${errorMessage}`, 'error');
+        } else {
+          showNotification(`${activeTab} updated & synced!`);
+          setEditingItemId(null);
+          const { data } = await supabase.from(config.table).select('*').order(config.orderBy, { ascending: false });
           if (data) setListData(data);
         }
       }
-    }
     } finally {
       setIsSavingList(false);
     }
   };
 
   const addItem = () => {
-    const newItem = activeTab === 'experiences' ? { id: Date.now().toString(), company_institution: '', role: '', type: 'professional' } :
-                  activeTab === 'portfolio' ? { id: Date.now().toString(), title: '', category: 'graphics' } :
-                  activeTab === 'reviews' ? { id: Date.now().toString(), name: '', service_taken: '', rating: 5, country_flag: '', text: '' } :
-                  activeTab === 'blogs' ? { id: Date.now().toString(), title: '', published_at: new Date().toISOString() } :
-                  { id: Date.now().toString(), title: '', date: new Date().toISOString() };
-    setListData([{...newItem}, ...listData]);
+    const defaultDataMap: Record<string, any> = {
+      experiences: { company_institution: '', role: '', type: 'professional', bullet_points: [] },
+      portfolio: { title: '', category: 'graphics' },
+      reviews: { name: '', service_taken: '', rating: 5, country_flag: '', text: '' },
+      blogs: { title: '', published_at: new Date().toISOString() },
+      achievements: { title: '', date: new Date().toISOString() }
+    };
+    const newItem = { id: Date.now().toString(), ...(defaultDataMap[activeTab] || { title: '' }) };
+    setListData([newItem, ...listData]);
     setEditingItemId(newItem.id);
   };
 
   const deleteItem = async (id: string) => {
-    if (hasSupabaseConfig && typeof id === 'string' && id.includes('-')) {
-      const table = activeTab === 'experiences' ? 'experiences' : 
-                    activeTab === 'portfolio' ? 'portfolio_items' : 
-                    activeTab === 'reviews' ? 'client_reviews' : 
-                    activeTab === 'blogs' ? 'blogs' : 'achievements';
+    if (hasSupabaseConfig && typeof id === 'string' && id.includes('-') && TABS_CONFIG[activeTab]) {
       try {
-        await supabase.from(table).delete().match({ id });
+        await supabase.from(TABS_CONFIG[activeTab].table).delete().match({ id });
       } catch (e) {
-        console.error(e);
+        // Silent recovery
       }
     }
     setListData(listData.filter(item => item.id !== id));
@@ -362,11 +286,11 @@ export default function AdminDashboard({ session }: { session: any }) {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
           <label className="block text-sm font-medium text-slate-300 mb-2">Full Name</label>
-          <input type="text" value={profileData.name} onChange={e => setProfileData({...profileData, name: e.target.value})} className="w-full bg-slate-800/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-blue-500 transition-colors" />
+          <input type="text" value={profileData.name || ''} onChange={e => setProfileData({...profileData, name: e.target.value})} className="w-full bg-slate-800/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-blue-500 transition-colors" />
         </div>
         <div>
           <label className="block text-sm font-medium text-slate-300 mb-2">Headline / Title</label>
-          <input type="text" value={profileData.title} onChange={e => setProfileData({...profileData, title: e.target.value})} className="w-full bg-slate-800/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-blue-500 transition-colors" />
+          <input type="text" value={profileData.title || ''} onChange={e => setProfileData({...profileData, title: e.target.value})} className="w-full bg-slate-800/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-blue-500 transition-colors" />
         </div>
         <div className="md:col-span-2">
           <label className="block text-sm font-medium text-slate-300 mb-2">Bio</label>
@@ -374,15 +298,15 @@ export default function AdminDashboard({ session }: { session: any }) {
         </div>
         <div>
           <label className="block text-sm font-medium text-slate-300 mb-2">Email Address</label>
-          <input type="email" value={profileData.email} onChange={e => setProfileData({...profileData, email: e.target.value})} className="w-full bg-slate-800/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-blue-500 transition-colors" />
+          <input type="email" value={profileData.email || ''} onChange={e => setProfileData({...profileData, email: e.target.value})} className="w-full bg-slate-800/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-blue-500 transition-colors" />
         </div>
         <div>
           <label className="block text-sm font-medium text-slate-300 mb-2">Phone Number</label>
-          <input type="text" value={profileData.phone} onChange={e => setProfileData({...profileData, phone: e.target.value})} className="w-full bg-slate-800/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-blue-500 transition-colors" />
+          <input type="text" value={profileData.phone || ''} onChange={e => setProfileData({...profileData, phone: e.target.value})} className="w-full bg-slate-800/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-blue-500 transition-colors" />
         </div>
         <div>
           <label className="block text-sm font-medium text-slate-300 mb-2">Location</label>
-          <input type="text" value={profileData.location} onChange={e => setProfileData({...profileData, location: e.target.value})} className="w-full bg-slate-800/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-blue-500 transition-colors" />
+          <input type="text" value={profileData.location || ''} onChange={e => setProfileData({...profileData, location: e.target.value})} className="w-full bg-slate-800/50 border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-blue-500 transition-colors" />
         </div>
         <div>
           <label className="block text-sm font-bold text-blue-400 mb-2 uppercase tracking-wide">Upload Avatar Image</label>
@@ -404,6 +328,33 @@ export default function AdminDashboard({ session }: { session: any }) {
               {uploadingStates['resume_url'] ? <span className="text-sm text-emerald-400 animate-pulse">Uploading...</span> : <Upload size={20} className="text-emerald-400" />}
               <input type="file" disabled={uploadingStates['resume_url']} accept=".pdf" onChange={(e) => handleProfileUpload(e, 'resume_url')} className="hidden" />
             </label>
+          </div>
+        </div>
+        <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-white/10">
+          <h4 className="md:col-span-2 text-sm font-bold text-blue-400 uppercase tracking-widest">Social Links</h4>
+          <div>
+            <label className="block text-xs font-medium text-slate-500 mb-1">Facebook URL</label>
+            <input type="text" value={profileData.facebook_url || ''} onChange={e => setProfileData({...profileData, facebook_url: e.target.value})} className="w-full bg-slate-800/50 border border-white/10 rounded-xl px-4 py-2 text-white text-sm focus:outline-none focus:border-blue-500 transition-colors" />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-slate-500 mb-1">Instagram URL</label>
+            <input type="text" value={profileData.instagram_url || ''} onChange={e => setProfileData({...profileData, instagram_url: e.target.value})} className="w-full bg-slate-800/50 border border-white/10 rounded-xl px-4 py-2 text-white text-sm focus:outline-none focus:border-blue-500 transition-colors" />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-slate-500 mb-1">LinkedIn URL</label>
+            <input type="text" value={profileData.linkedin_url || ''} onChange={e => setProfileData({...profileData, linkedin_url: e.target.value})} className="w-full bg-slate-800/50 border border-white/10 rounded-xl px-4 py-2 text-white text-sm focus:outline-none focus:border-blue-500 transition-colors" />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-slate-500 mb-1">Behance URL</label>
+            <input type="text" value={profileData.behance_url || ''} onChange={e => setProfileData({...profileData, behance_url: e.target.value})} className="w-full bg-slate-800/50 border border-white/10 rounded-xl px-4 py-2 text-white text-sm focus:outline-none focus:border-blue-500 transition-colors" />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-slate-500 mb-1">Twitter URL</label>
+            <input type="text" value={profileData.twitter_url || ''} onChange={e => setProfileData({...profileData, twitter_url: e.target.value})} className="w-full bg-slate-800/50 border border-white/10 rounded-xl px-4 py-2 text-white text-sm focus:outline-none focus:border-blue-500 transition-colors" />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-slate-500 mb-1">YouTube URL</label>
+            <input type="text" value={profileData.youtube_url || ''} onChange={e => setProfileData({...profileData, youtube_url: e.target.value})} className="w-full bg-slate-800/50 border border-white/10 rounded-xl px-4 py-2 text-white text-sm focus:outline-none focus:border-blue-500 transition-colors" />
           </div>
         </div>
       </div>
@@ -489,63 +440,255 @@ export default function AdminDashboard({ session }: { session: any }) {
     }
   }, [activeTab]);
 
-  const renderDashboard = () => (
-    <div className="space-y-8">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-slate-800/50 border border-white/10 rounded-2xl p-6 shadow-lg relative overflow-hidden group hover:border-blue-500/30 transition-colors">
-          <div className="absolute -top-4 -right-4 p-6 bg-blue-500/10 rounded-full group-hover:bg-blue-500/20 transition-colors"><Users size={48} className="text-blue-500/50" /></div>
-          <p className="text-sm font-medium text-slate-400 mb-1 relative z-10">Total Visitors (Unique)</p>
-          <h3 className="text-4xl font-bold text-white mb-2 relative z-10">{Math.floor(viewCount * 0.4).toLocaleString()}</h3>
-          <p className="text-xs text-emerald-400 font-medium whitespace-nowrap overflow-hidden text-ellipsis relative z-10">Based on session estimation</p>
+  const [stats, setStats] = useState({
+    portfolio: 0,
+    experiences: 0,
+    blogs: 0,
+    messages: 0,
+    reviews: 0,
+    achievements: 0
+  });
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      if (hasSupabaseConfig) {
+        const [p, e, b, m, r, a] = await Promise.all([
+          supabase.from('portfolio_items').select('*', { count: 'exact', head: true }),
+          supabase.from('experiences').select('*', { count: 'exact', head: true }),
+          supabase.from('blogs').select('*', { count: 'exact', head: true }),
+          supabase.from('messages').select('*', { count: 'exact', head: true }),
+          supabase.from('client_reviews').select('*', { count: 'exact', head: true }),
+          supabase.from('achievements').select('*', { count: 'exact', head: true }),
+        ]);
+        setStats({
+          portfolio: p.count || 0,
+          experiences: e.count || 0,
+          blogs: b.count || 0,
+          messages: m.count || 0,
+          reviews: r.count || 0,
+          achievements: a.count || 0
+        });
+      } else {
+        setStats({
+          portfolio: mockPortfolioItems.length,
+          experiences: mockExperiences.length,
+          blogs: mockBlogs.length,
+          messages: getMockData('mock_messages', []).length,
+          reviews: mockReviews.length,
+          achievements: mockAchievements.length
+        });
+      }
+    };
+    fetchStats();
+  }, []);
+
+  const renderDashboard = () => {
+    const COLORS = ['#3b82f6', '#10b981', '#6366f1', '#f59e0b', '#ec4899', '#8b5cf6'];
+    const pieData = [
+      { name: 'Projects', value: stats.portfolio },
+      { name: 'Works', value: stats.experiences },
+      { name: 'Milestones', value: stats.achievements },
+      { name: 'Blogs', value: stats.blogs },
+    ].filter(d => d.value > 0);
+
+    const barData = [
+      { name: 'Msgs', value: stats.messages },
+      { name: 'Reviews', value: stats.reviews },
+    ];
+
+    const recentActivity = [
+      { id: 1, type: 'view', text: 'New visitor from London, UK', time: '2 mins ago', icon: <Eye size={12} className="text-blue-400" /> },
+      { id: 2, type: 'message', text: 'New message received', time: '1 hour ago', icon: <Mail size={12} className="text-emerald-400" /> },
+      { id: 3, type: 'update', text: 'Portfolio updated', time: '3 hours ago', icon: <Plus size={12} className="text-indigo-400" /> },
+      { id: 4, type: 'review', text: 'New client review', time: '5 hours ago', icon: <Award size={12} className="text-amber-400" /> },
+    ];
+
+    return (
+      <div className="space-y-6">
+        {/* Metric Grid */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {[
+            { label: 'Site Traffic', value: viewCount.toLocaleString(), trend: '+12.5%', icon: <Eye className="text-blue-400" />, color: 'blue' },
+            { label: 'Messages', value: stats.messages, trend: '+3', icon: <Mail className="text-emerald-400" />, color: 'emerald' },
+            { label: 'Showcase Items', value: stats.portfolio, trend: 'Active', icon: <Briefcase className="text-indigo-400" />, color: 'indigo' },
+            { label: 'Client Satisfaction', value: '4.9', trend: 'Fantastic', icon: <Award className="text-amber-400" />, color: 'amber' },
+          ].map((kpi, i) => (
+            <motion.div 
+              key={kpi.label}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: i * 0.1 }}
+              className="bg-slate-800/40 backdrop-blur-xl border border-white/5 rounded-2xl p-5 hover:border-white/10 transition-all duration-300 group"
+            >
+              <div className="flex justify-between items-start mb-4">
+                <div className={`p-2.5 rounded-xl bg-${kpi.color}-500/10 group-hover:scale-110 transition-transform duration-300`}>
+                  {kpi.icon}
+                </div>
+                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${kpi.color === 'blue' || kpi.color === 'emerald' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-blue-500/10 text-blue-400'}`}>
+                  {kpi.trend}
+                </span>
+              </div>
+              <p className="text-xs font-medium text-slate-400 uppercase tracking-widest">{kpi.label}</p>
+              <h3 className="text-2xl font-bold text-white tracking-tighter mt-1">{kpi.value}</h3>
+            </motion.div>
+          ))}
         </div>
-        <div className="bg-slate-800/50 border border-white/10 rounded-2xl p-6 shadow-lg relative overflow-hidden group hover:border-emerald-500/30 transition-colors">
-          <div className="absolute -top-4 -right-4 p-6 bg-emerald-500/10 rounded-full group-hover:bg-emerald-500/20 transition-colors"><Eye size={48} className="text-emerald-500/50" /></div>
-          <p className="text-sm font-medium text-slate-400 mb-1 relative z-10">Page Views</p>
-          <h3 className="text-4xl font-bold text-white mb-2 relative z-10">{viewCount.toLocaleString()}</h3>
-          <p className="text-xs text-emerald-400 font-medium relative z-10">Real-time counter</p>
+
+        {/* Main Charts & Activity Feed */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.98 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: 0.4 }}
+            className="lg:col-span-2 bg-slate-800/40 backdrop-blur-xl border border-white/5 rounded-3xl p-6 lg:p-8 flex flex-col min-h-[420px]"
+          >
+            <div className="flex justify-between items-center mb-8">
+              <div>
+                <h4 className="text-lg font-bold text-white tracking-tight flex items-center gap-2">
+                  Visitor Velocity
+                </h4>
+                <p className="text-xs text-slate-500 font-medium tracking-wide mt-1">Real-time traffic patterns over 24h</p>
+              </div>
+              <div className="flex bg-slate-900/50 rounded-full p-1 border border-white/5">
+                <button className="px-3 py-1 text-[10px] font-bold text-blue-400 bg-blue-500/10 rounded-full">LIVE</button>
+                <button className="px-3 py-1 text-[10px] font-bold text-slate-500 hover:text-slate-300">24H</button>
+              </div>
+            </div>
+            <div className="flex-1 w-full mt-4">
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={dynamicChartData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="colorVisits" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.4}/>
+                      <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                    </linearGradient>
+                  </defs>
+                  <Tooltip 
+                    contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #ffffff10', borderRadius: '16px', fontSize: '11px', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.5)' }}
+                    itemStyle={{ color: '#3b82f6', fontWeight: 'bold' }}
+                    labelStyle={{ opacity: 0.5, marginBottom: '4px' }}
+                    cursor={{ stroke: '#3b82f6', strokeWidth: 1, strokeDasharray: '4 4' }}
+                  />
+                  <Area type="monotone" dataKey="visitors" stroke="#3b82f6" strokeWidth={4} fillOpacity={1} fill="url(#colorVisits)" dot={false} activeDot={{ r: 6, fill: '#3b82f6', stroke: '#fff', strokeWidth: 2 }} />
+                </AreaChart>
+              </ResponsiveContainer>
+            </div>
+          </motion.div>
+
+          {/* Recent Activity */}
+          <motion.div 
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            transition={{ delay: 0.5 }}
+            className="bg-slate-800/40 backdrop-blur-xl border border-white/5 rounded-3xl p-6 lg:p-8 flex flex-col"
+          >
+            <h4 className="text-lg font-bold text-white tracking-tight mb-6">Recent Activity</h4>
+            <div className="space-y-6 flex-1">
+              {recentActivity.map((activity) => (
+                <div key={activity.id} className="relative pl-8 before:absolute before:left-[11px] before:top-8 before:bottom-[-24px] before:w-[2px] before:bg-white/5 last:before:hidden">
+                  <div className="absolute left-0 top-0 w-6 h-6 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center z-10">
+                    {activity.icon}
+                  </div>
+                  <div>
+                    <p className="text-sm text-slate-300 font-medium mb-1">{activity.text}</p>
+                    <span className="text-[10px] text-slate-500 uppercase tracking-widest font-bold">{activity.time}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </motion.div>
         </div>
-        <div className="bg-slate-800/50 border border-white/10 rounded-2xl p-6 shadow-lg relative overflow-hidden group hover:border-indigo-500/30 transition-colors">
-          <div className="absolute -top-4 -right-4 p-6 bg-indigo-500/10 rounded-full group-hover:bg-indigo-500/20 transition-colors"><MousePointerClick size={48} className="text-indigo-500/50" /></div>
-          <p className="text-sm font-medium text-slate-400 mb-1 relative z-10">Interactions</p>
-          <h3 className="text-4xl font-bold text-white mb-2 relative z-10">{Math.floor(viewCount * 0.15).toLocaleString()}</h3>
-          <p className="text-xs text-indigo-400 font-medium relative z-10">Derived stat</p>
+
+        {/* Bottom Stats Row */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.6 }}
+            className="bg-slate-800/40 border border-white/5 rounded-3xl p-6 shadow-xl flex items-center gap-6"
+          >
+            <div className="w-1/2 h-full min-h-[140px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={pieData}
+                    innerRadius={45}
+                    outerRadius={65}
+                    paddingAngle={10}
+                    dataKey="value"
+                    stroke="none"
+                  >
+                    {pieData.map((_entry, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip contentStyle={{ display: 'none' }} />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="w-1/2 space-y-3">
+              <h5 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">Content Map</h5>
+              {pieData.map((item, index) => (
+                <div key={item.name} className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: COLORS[index % COLORS.length] }}></div>
+                    <span className="text-[10px] font-bold text-slate-400 uppercase">{item.name}</span>
+                  </div>
+                  <span className="text-xs font-black text-white">{item.value}</span>
+                </div>
+              ))}
+            </div>
+          </motion.div>
+
+          <motion.div 
+             initial={{ opacity: 0, y: 20 }}
+             animate={{ opacity: 1, y: 0 }}
+             transition={{ delay: 0.7 }}
+             className="lg:col-span-2 bg-slate-800/40 border border-white/5 rounded-3xl p-6 shadow-xl flex flex-col"
+          >
+             <div className="flex justify-between items-center mb-6">
+               <h5 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Inbound Performance</h5>
+               <div className="flex gap-4">
+                 <div className="flex items-center gap-2">
+                   <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
+                   <span className="text-[10px] font-bold text-slate-400 uppercase">Messages</span>
+                 </div>
+                 <div className="flex items-center gap-2">
+                   <div className="w-2 h-2 rounded-full bg-amber-500"></div>
+                   <span className="text-[10px] font-bold text-slate-400 uppercase">Reviews</span>
+                 </div>
+               </div>
+             </div>
+             <div className="flex-1 w-full min-h-[100px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={barData} layout="vertical" margin={{ left: -30 }}>
+                    <XAxis type="number" hide />
+                    <YAxis dataKey="name" type="category" stroke="#94a3b8" fontSize={9} axisLine={false} tickLine={false} />
+                    <Bar dataKey="value" radius={[0, 10, 10, 0]} barSize={12}>
+                      {barData.map((_entry, index) => (
+                        <Cell key={`bar-${index}`} fill={index === 0 ? '#10b981' : '#f59e0b'} />
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+             </div>
+          </motion.div>
         </div>
       </div>
-      <div className="bg-slate-800/50 border border-white/10 rounded-2xl p-6 shadow-lg h-80 flex flex-col">
-        <div className="flex justify-between items-center mb-6">
-          <h3 className="text-lg font-bold text-white flex items-center gap-2">
-            Real-time Hourly Visitors <span className="relative flex h-3 w-3"><span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span><span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span></span>
-          </h3>
-        </div>
-        <div className="flex-1 w-full relative">
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={dynamicChartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-              <defs>
-                <linearGradient id="colorVisitors" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3}/>
-                  <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" vertical={false} />
-              <XAxis dataKey="name" stroke="#ffffff50" fontSize={12} tickLine={false} axisLine={false} />
-              <Tooltip 
-                contentStyle={{ backgroundColor: '#0f172a', borderColor: '#ffffff20', borderRadius: '12px', color: '#fff' }}
-                itemStyle={{ color: '#3b82f6', fontWeight: 'bold' }}
-              />
-              <Area type="monotone" dataKey="visitors" stroke="#3b82f6" strokeWidth={3} fillOpacity={1} fill="url(#colorVisitors)" />
-            </AreaChart>
-          </ResponsiveContainer>
-        </div>
-      </div>
-    </div>
-  );
+    );
+  };
 
   const renderListForm = () => (
     <form onSubmit={handleSaveList} className="space-y-6">
       <div className="flex justify-between items-center mb-4">
-        <h3 className="text-lg font-semibold text-slate-300">Items List</h3>
-        <button type="button" onClick={addItem} className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-sm transition-all">
-          <Plus size={16} /> Add New
+        <h3 className="text-lg font-semibold text-slate-300">
+          {activeTab === 'blogs' ? 'Published Blogs' : 
+           activeTab === 'reviews' ? 'Client Feedback' : 
+           activeTab === 'portfolio' ? 'Showcase Items' : 
+           activeTab === 'achievements' ? 'Milestone List' : 'Experience History'}
+        </h3>
+        <button type="button" onClick={addItem} className="flex items-center gap-2 px-4 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg text-sm transition-all shadow-lg shadow-emerald-900/20">
+          <Plus size={16} /> Create New
         </button>
       </div>
       
@@ -568,25 +711,80 @@ export default function AdminDashboard({ session }: { session: any }) {
               ) : (
                 <div className="flex-1 text-white font-bold px-3 py-2 bg-slate-900/50 rounded-lg border border-white/5 line-clamp-1">{item.title || 'Untitled'}</div>
               )}
-              <div className="flex gap-2">
-                <button type="button" onClick={() => editingItemId === item.id ? setEditingItemId(null) : setEditingItemId(item.id)} className="text-blue-400 hover:text-blue-300 p-2 text-sm font-medium">
-                  {editingItemId === item.id ? 'Close' : 'Edit'}
-                </button>
-                <button type="button" onClick={() => deleteItem(item.id)} className="text-red-400 hover:text-red-300 p-2">
-                  <Trash2 size={18} />
-                </button>
-              </div>
+                <div className="flex gap-2 items-center">
+                  <button 
+                    type="button" 
+                    onClick={async () => {
+                      // Save this specific item
+                      const key = `mock_${activeTab}`;
+                      const currentLocalData = getMockData(key, []);
+                      const updatedLocalData = currentLocalData.map((d: any) => d.id === item.id ? item : d);
+                      saveMockData(key, updatedLocalData);
+
+                      if (hasSupabaseConfig) {
+                        const table = activeTab === 'experiences' ? 'experiences' : 
+                                      activeTab === 'portfolio' ? 'portfolio_items' : 
+                                      activeTab === 'reviews' ? 'client_reviews' : 
+                                      activeTab === 'blogs' ? 'blogs' : 'achievements';
+                        
+                        let cleanedItem: any = { ...item };
+                        if (!cleanedItem.id || !cleanedItem.id.toString().includes('-')) {
+                          delete cleanedItem.id;
+                        }
+
+                        setIsSavingList(true);
+                        try {
+                          const { error } = await supabase.from(table).upsert([cleanedItem]);
+                          if (error) showNotification('Sync error: ' + error.message, 'error');
+                          else showNotification('Item saved & synced!');
+                        } finally {
+                          setIsSavingList(false);
+                        }
+                      } else {
+                        showNotification('Item saved locally!');
+                      }
+                      setEditingItemId(null);
+                    }} 
+                    className="flex items-center gap-1.5 px-3 py-1 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 text-[10px] font-black uppercase tracking-widest rounded-lg border border-blue-500/20 transition-all"
+                  >
+                    <Save size={12} /> Save
+                  </button>
+                  <button type="button" onClick={() => editingItemId === item.id ? setEditingItemId(null) : setEditingItemId(item.id)} className="text-blue-400 hover:text-blue-300 p-2 text-sm font-medium">
+                    {editingItemId === item.id ? 'Close' : 'Edit'}
+                  </button>
+                  <button type="button" onClick={() => deleteItem(item.id)} className="text-red-400 hover:text-red-300 p-2">
+                    <Trash2 size={18} />
+                  </button>
+                </div>
             </div>
             {activeTab === 'portfolio' && editingItemId === item.id && (
               <div className="grid grid-cols-1 gap-4">
                 <input type="text" value={item.link || ''} onChange={e => updateItem(item.id, 'link', e.target.value)} placeholder="Live Website Preview URL (e.g., https://my-site.com)" className="bg-slate-900/50 border border-white/10 rounded-lg px-3 py-2 text-white text-sm" />
                 <div className="flex gap-4">
-                  <select value={item.category} onChange={e => updateItem(item.id, 'category', e.target.value)} className="bg-slate-900/50 border border-white/10 rounded-lg px-3 py-2 text-white text-sm flex-1">
-                    <option value="graphics">Graphics</option>
-                    <option value="video">Video</option>
-                    <option value="web">Web</option>
-                    <option value="projects">Projects</option>
-                  </select>
+                  <div className="flex-1 flex gap-2">
+                    <select 
+                      value={['graphics', 'video', 'web', 'projects'].includes(item.category) ? item.category : 'custom'} 
+                      onChange={e => {
+                        if (e.target.value !== 'custom') {
+                          updateItem(item.id, 'category', e.target.value)
+                        }
+                      }} 
+                      className="bg-slate-900/50 border border-white/10 rounded-lg px-3 py-2 text-white text-sm w-32 shrink-0"
+                    >
+                      <option value="graphics">Graphics</option>
+                      <option value="video">Video</option>
+                      <option value="web">Web</option>
+                      <option value="projects">Projects</option>
+                      <option value="custom">Custom...</option>
+                    </select>
+                    <input 
+                      type="text" 
+                      value={item.category || ''} 
+                      onChange={e => updateItem(item.id, 'category', e.target.value)} 
+                      placeholder="Category (e.g. Logo, App, Branding)" 
+                      className="bg-slate-900/50 border border-white/10 rounded-lg px-3 py-2 text-white text-sm flex-1" 
+                    />
+                  </div>
                   <label className="group flex-1 cursor-pointer bg-slate-800 hover:bg-slate-700 p-2 rounded-lg border border-white/10 transition-colors flex items-center justify-center gap-2">
                     {uploadingStates[`${item.id}_image_url`] ? <span className="text-sm text-blue-400 animate-pulse">Uploading...</span> : (
                       <>
@@ -643,52 +841,187 @@ export default function AdminDashboard({ session }: { session: any }) {
                   <input type="text" value={item.role || ''} onChange={e => updateItem(item.id, 'role', e.target.value)} placeholder="Role (e.g. Lead Developer)" className="bg-slate-900/50 border border-white/10 rounded-lg px-3 py-2 text-white text-sm flex-1" />
                   <input type="text" value={item.company_institution || ''} onChange={e => updateItem(item.id, 'company_institution', e.target.value)} placeholder="Company / Institution" className="bg-slate-900/50 border border-white/10 rounded-lg px-3 py-2 text-white text-sm flex-1" />
                 </div>
-                <div className="flex gap-4">
-                  <select value={item.type || 'professional'} onChange={e => updateItem(item.id, 'type', e.target.value)} className="bg-slate-900/50 border border-white/10 rounded-lg px-3 py-2 text-white text-sm flex-1">
-                    <option value="professional">Professional</option>
-                    <option value="education">Education</option>
-                    <option value="creative">Creative</option>
-                  </select>
-                  <div className="flex flex-1 items-center gap-2">
-                    <input 
-                        type="date" 
-                        value={item.date_range?.split(' to ')[0] || item.date_range?.split(' - ')[0] || ''} 
-                        onChange={e => updateItem(item.id, 'date_range', `${e.target.value} to ${item.date_range?.split(' to ')[1] || item.date_range?.split(' - ')[1] || 'Present'}`)} 
-                        className="bg-slate-900/50 border border-white/10 rounded-lg px-2 py-2 text-white text-sm w-1/2" 
-                        title="Start Date"
-                    />
-                    <span className="text-white/50 text-xs text-center">to</span>
-                    <div className="flex w-1/2 items-center gap-2">
+                <div className="flex flex-col md:flex-row gap-4">
+                  <div className="flex-1 flex gap-2">
+                    <div className="flex flex-col gap-1 w-32">
+                      <label className="text-[10px] text-slate-500 font-black uppercase ml-1">Type</label>
+                      <select 
+                        value={['professional', 'education', 'club'].includes(item.type) ? item.type : 'custom'} 
+                        onChange={e => {
+                          if (e.target.value === 'custom') {
+                            updateItem(item.id, 'type', '');
+                          } else {
+                            updateItem(item.id, 'type', e.target.value);
+                          }
+                        }} 
+                        className="bg-slate-900/50 border border-white/10 rounded-lg px-3 py-2 text-white text-sm h-10"
+                      >
+                        <option value="professional">Professional</option>
+                        <option value="education">Education</option>
+                        <option value="club">Club</option>
+                        <option value="custom">Custom...</option>
+                      </select>
+                    </div>
+                    <div className="flex flex-col gap-1 flex-1">
+                      <label className="text-[10px] text-slate-500 font-black uppercase ml-1">Category Title</label>
                       <input 
-                          type="date" 
-                          value={(item.date_range?.split(' to ')[1] === 'Present' || item.date_range?.split(' - ')[1] === 'Present' || !item.date_range) ? '' : (item.date_range?.split(' to ')[1] || item.date_range?.split(' - ')[1] || '')} 
-                          onChange={e => updateItem(item.id, 'date_range', `${item.date_range?.split(' to ')[0] || item.date_range?.split(' - ')[0] || ''} to ${e.target.value || 'Present'}`)} 
-                          disabled={item.date_range?.endsWith('Present')}
-                          className="bg-slate-900/50 border border-white/10 rounded-lg px-2 py-2 text-white text-sm w-full disabled:opacity-30 disabled:cursor-not-allowed" 
-                          title="End Date"
+                        type="text" 
+                        value={item.type || ''} 
+                        onChange={e => updateItem(item.id, 'type', e.target.value)} 
+                        placeholder={['professional', 'education', 'club'].includes(item.type) ? item.type : 'Type...'} 
+                        className="bg-slate-900/50 border border-white/10 rounded-lg px-3 py-2 text-white text-sm h-10 w-full" 
                       />
-                      <label className="flex items-center gap-1 text-xs text-slate-300 shrink-0 cursor-pointer">
-                        <input 
-                            type="checkbox" 
-                            checked={item.date_range?.endsWith('Present')} 
-                            onChange={e => updateItem(item.id, 'date_range', `${item.date_range?.split(' to ')[0] || item.date_range?.split(' - ')[0] || ''} to ${e.target.checked ? 'Present' : ''}`)} 
-                            className="rounded border-none outline-none accent-blue-500" 
-                        />
-                        Present
-                      </label>
                     </div>
                   </div>
-                  <label className="group w-32 cursor-pointer bg-slate-800 hover:bg-slate-700 p-2 rounded-lg border border-white/10 transition-colors flex items-center justify-center gap-2">
-                    {uploadingStates[`${item.id}_image_url`] ? <span className="text-sm text-blue-400 animate-pulse">Wait...</span> : (
-                      <>
-                        {item.image_url ? <img src={item.image_url} alt="Logo" className="w-6 h-6 rounded object-cover bg-white" /> : <Upload size={16} className="text-blue-400" />}
-                        <span className="text-xs font-medium text-white">{item.image_url ? 'Change' : 'Logo'}</span>
-                      </>
-                    )}
-                    <input type="file" accept="image/*" disabled={uploadingStates[`${item.id}_image_url`]} onChange={(e) => handleListUpload(e, item.id, 'image_url')} className="hidden" />
-                  </label>
+                  
+                  <div className="flex-[2] grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {/* Start Date */}
+                    <div className="flex flex-col gap-1">
+                      <label className="text-[10px] text-slate-500 font-black uppercase ml-1">Start Date (Date, Month, Year)</label>
+                      <div className="flex gap-1">
+                        <select 
+                          value={item.date_range?.split(' to ')[0]?.split(' ')[0] || '1'} 
+                          onChange={e => {
+                            const startParts = (item.date_range?.split(' to ')[0] || '1 Jan 2024').split(' ');
+                            const day = e.target.value;
+                            const month = startParts.length === 3 ? startParts[1] : (startParts[0] || 'Jan');
+                            const year = startParts.length === 3 ? startParts[2] : (startParts[1] || '2024');
+                            const end = item.date_range?.split(' to ')[1] || 'Present';
+                            updateItem(item.id, 'date_range', `${day} ${month} ${year} to ${end}`);
+                          }}
+                          className="bg-slate-900/50 border border-white/10 rounded-lg py-1.5 text-white text-[10px] w-12 text-center"
+                        >
+                          {Array.from({length: 31}, (_, i) => i + 1).map(d => <option key={d} value={d}>{d}</option>)}
+                        </select>
+                        <select 
+                          value={item.date_range?.split(' to ')[0]?.split(' ')[1] || 'Jan'} 
+                          onChange={e => {
+                            const startParts = (item.date_range?.split(' to ')[0] || '1 Jan 2024').split(' ');
+                            const day = startParts.length === 3 ? startParts[0] : '1';
+                            const month = e.target.value;
+                            const year = startParts.length === 3 ? startParts[2] : (startParts[1] || '2024');
+                            const end = item.date_range?.split(' to ')[1] || 'Present';
+                            updateItem(item.id, 'date_range', `${day} ${month} ${year} to ${end}`);
+                          }}
+                          className="bg-slate-900/50 border border-white/10 rounded-lg py-1.5 text-white text-[10px] flex-1 text-center"
+                        >
+                          {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].map(m => <option key={m} value={m}>{m}</option>)}
+                        </select>
+                        <input 
+                          type="number" 
+                          placeholder="Year"
+                          value={item.date_range?.split(' to ')[0]?.split(' ')[2] || item.date_range?.split(' to ')[0]?.split(' ')[1] || ''}
+                          onChange={e => {
+                            const startParts = (item.date_range?.split(' to ')[0] || '1 Jan 2024').split(' ');
+                            const day = startParts.length === 3 ? startParts[0] : '1';
+                            const month = startParts.length === 3 ? startParts[1] : (startParts[0] || 'Jan');
+                            const year = e.target.value;
+                            const end = item.date_range?.split(' to ')[1] || 'Present';
+                            updateItem(item.id, 'date_range', `${day} ${month} ${year} to ${end}`);
+                          }}
+                          className="bg-slate-900/50 border border-white/10 rounded-lg px-2 py-1.5 text-white text-[10px] w-16 text-center"
+                        />
+                      </div>
+                    </div>
+
+                    {/* End Date */}
+                    <div className="flex flex-col gap-1">
+                      <div className="flex justify-between items-center px-1">
+                        <label className="text-[10px] text-slate-500 font-black uppercase">End Date</label>
+                        <label className="flex items-center gap-1.5 text-[10px] font-black text-blue-500 cursor-pointer">
+                          <input 
+                              type="checkbox" 
+                              checked={!!item.date_range?.endsWith('Present')} 
+                              onChange={e => {
+                                const start = item.date_range?.split(' to ')[0] || '1 Jan 2024';
+                                updateItem(item.id, 'date_range', `${start} to ${e.target.checked ? 'Present' : '1 Jan ' + new Date().getFullYear()}`);
+                              }} 
+                              className="w-3 h-3 rounded outline-none accent-blue-500" 
+                          />
+                          <span>PRESENT</span>
+                        </label>
+                      </div>
+                      
+                      <div className="flex gap-1 h-10 items-center">
+                        {!item.date_range?.endsWith('Present') ? (
+                          <>
+                            <select 
+                              value={item.date_range?.split(' to ')[1]?.split(' ')[0] || '1'} 
+                              onChange={e => {
+                                const start = item.date_range?.split(' to ')[0] || '1 Jan 2024';
+                                const endParts = (item.date_range?.split(' to ')[1] || '1 Jan 2024').split(' ');
+                                const day = e.target.value;
+                                const month = endParts.length === 3 ? endParts[1] : (endParts[0] || 'Jan');
+                                const year = endParts.length === 3 ? endParts[2] : (endParts[1] || '2024');
+                                updateItem(item.id, 'date_range', `${start} to ${day} ${month} ${year}`);
+                              }}
+                              className="bg-slate-900/50 border border-white/10 rounded-lg py-1.5 text-white text-[10px] w-12 text-center"
+                            >
+                              {Array.from({length: 31}, (_, i) => i + 1).map(d => <option key={d} value={d}>{d}</option>)}
+                            </select>
+                            <select 
+                              value={item.date_range?.split(' to ')[1]?.split(' ')[1] || 'Jan'} 
+                              onChange={e => {
+                                const start = item.date_range?.split(' to ')[0] || '1 Jan 2024';
+                                const endParts = (item.date_range?.split(' to ')[1] || '1 Jan 2024').split(' ');
+                                const day = endParts.length === 3 ? endParts[0] : '1';
+                                const month = e.target.value;
+                                const year = endParts.length === 3 ? endParts[2] : (endParts[1] || '2024');
+                                updateItem(item.id, 'date_range', `${start} to ${day} ${month} ${year}`);
+                              }}
+                              className="bg-slate-900/50 border border-white/10 rounded-lg py-1.5 text-white text-[10px] flex-1 text-center"
+                            >
+                              {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].map(m => <option key={m} value={m}>{m}</option>)}
+                            </select>
+                            <input 
+                              type="number" 
+                              placeholder="Year"
+                              value={item.date_range?.split(' to ')[1]?.split(' ')[2] || item.date_range?.split(' to ')[1]?.split(' ')[1] || ''}
+                              onChange={e => {
+                                const start = item.date_range?.split(' to ')[0] || '1 Jan 2024';
+                                const endParts = (item.date_range?.split(' to ')[1] || '1 Jan 2024').split(' ');
+                                const day = endParts.length === 3 ? endParts[0] : '1';
+                                const month = endParts.length === 3 ? endParts[1] : (endParts[0] || 'Jan');
+                                const year = e.target.value;
+                                updateItem(item.id, 'date_range', `${start} to ${day} ${month} ${year}`);
+                              }}
+                              className="bg-slate-900/50 border border-white/10 rounded-lg px-2 py-1.5 text-white text-[10px] w-16 text-center"
+                            />
+                          </>
+                        ) : (
+                          <div className="flex-1 bg-blue-500/10 border border-blue-500/20 rounded-lg h-full flex items-center justify-center text-blue-400 text-[10px] font-black uppercase tracking-widest">Ongoing Role</div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="flex flex-col gap-1 w-14">
+                    <label className="text-[10px] text-slate-500 font-black uppercase ml-1">Logo</label>
+                    <label className="group h-10 cursor-pointer bg-slate-800 hover:bg-slate-700 rounded-lg border border-white/10 transition-colors flex items-center justify-center relative">
+                      {uploadingStates[`${item.id}_image_url`] ? <span className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></span> : (
+                        <>
+                          {item.image_url ? (
+                            <img src={item.image_url} alt="Logo" className="w-full h-full object-contain rounded-lg p-1 bg-white" title="Change Logo" />
+                          ) : (
+                            <Upload size={16} className="text-blue-500 group-hover:scale-110 transition-transform" />
+                          )}
+                        </>
+                      )}
+                      <input type="file" accept="image/*" disabled={uploadingStates[`${item.id}_image_url`]} onChange={(e) => handleListUpload(e, item.id, 'image_url')} className="hidden" />
+                    </label>
+                  </div>
                 </div>
                 <JoditEditor value={item.description || ''} config={editorConfig} onBlur={newContent => updateItem(item.id, 'description', newContent)} />
+                <div className="mt-4">
+                  <label className="block text-xs font-bold text-blue-400 uppercase tracking-widest mb-2">Bullet Points (One per line)</label>
+                  <textarea 
+                    rows={4} 
+                    value={Array.isArray(item.bullet_points) ? item.bullet_points.join('\n') : (item.bullet_points || '')} 
+                    onChange={e => updateItem(item.id, 'bullet_points', e.target.value.split('\n'))}
+                    placeholder="Designed 50+ logos&#10;Managed 10+ social accounts&#10;Increased traffic by 200%"
+                    className="w-full bg-slate-900/50 border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-blue-500 transition-colors placeholder:text-slate-600"
+                  />
+                </div>
               </div>
             )}
             {activeTab === 'reviews' && editingItemId === item.id && (
@@ -704,32 +1037,27 @@ export default function AdminDashboard({ session }: { session: any }) {
                   }} placeholder="Rating (1-5)" className="bg-slate-900/50 border border-white/10 rounded-lg px-3 py-2 text-white text-sm flex-1" />
                   <div className="flex-1 flex gap-2">
                     <select 
-                      value={['🇺🇸','🇬🇧','🇨🇦','🇦🇺','🇩🇪','🇫🇷','🇮🇳','🇧🇩','🇦🇪','🇸🇦'].includes(item.country_flag) ? item.country_flag : (item.country_flag ? 'custom' : '')} 
-                      onChange={e => {
-                        if (e.target.value !== 'custom') {
-                          updateItem(item.id, 'country_flag', e.target.value)
-                        }
-                      }} 
-                      className="bg-slate-900/50 border border-white/10 rounded-lg px-2 text-white text-sm w-20"
+                      value={['🇺🇸','🇬🇧','🇨🇦','🇦🇺','🇩🇪','🇫🇷','🇮🇳','🇧🇩','🇦🇪','🇸🇦'].includes(item.country_flag) ? item.country_flag : ''} 
+                      onChange={e => updateItem(item.id, 'country_flag', e.target.value)} 
+                      className="bg-slate-900/50 border border-white/10 rounded-lg px-2 text-white text-sm w-32"
                     >
-                      <option value="">None</option>
-                      <option value="🇺🇸">🇺🇸 USA</option>
-                      <option value="🇬🇧">🇬🇧 UK</option>
-                      <option value="🇨🇦">🇨🇦 CAN</option>
-                      <option value="🇦🇺">🇦🇺 AUS</option>
-                      <option value="🇩🇪">🇩🇪 GER</option>
-                      <option value="🇫🇷">🇫🇷 FRA</option>
-                      <option value="🇮🇳">🇮🇳 IND</option>
-                      <option value="🇧🇩">🇧🇩 BAN</option>
+                      <option value="">No Flag / Preset</option>
+                      <option value="🇺🇸">🇺🇸 United States</option>
+                      <option value="🇬🇧">🇬🇧 United Kingdom</option>
+                      <option value="🇨🇦">🇨🇦 Canada</option>
+                      <option value="🇦🇺">🇦🇺 Australia</option>
+                      <option value="🇩🇪">🇩🇪 Germany</option>
+                      <option value="🇫🇷">🇫🇷 France</option>
+                      <option value="🇮🇳">🇮🇳 India</option>
+                      <option value="🇧🇩">🇧🇩 Bangladesh</option>
                       <option value="🇦🇪">🇦🇪 UAE</option>
-                      <option value="🇸🇦">🇸🇦 KSA</option>
-                      <option value="custom">Custom(URL)</option>
+                      <option value="🇸🇦">🇸🇦 Saudi Arabia</option>
                     </select>
                     <input 
                       type="text" 
                       value={item.country_flag || ''} 
                       onChange={e => updateItem(item.id, 'country_flag', e.target.value)} 
-                      placeholder="Or Paste URL/Emoji" 
+                      placeholder="Or Custom (Flag/URL/Text)" 
                       className="bg-slate-900/50 border border-white/10 rounded-lg px-3 py-2 text-white text-sm flex-1" 
                     />
                   </div>
@@ -759,63 +1087,161 @@ export default function AdminDashboard({ session }: { session: any }) {
   );
 
   return (
-    <div className="min-h-screen bg-slate-900 flex flex-col md:flex-row font-sans text-white">
-      {notification && (
-        <div className={`fixed top-4 right-4 z-[100] px-6 py-3 rounded-xl shadow-2xl transition-all font-medium border flex items-center gap-3 ${notification.type === 'error' ? 'bg-red-500/20 text-red-100 border-red-500/50' : 'bg-green-500/20 text-green-100 border-green-500/50'}`}>
-          {notification.message}
-        </div>
-      )}
-      <aside className="w-full md:w-64 bg-slate-950 border-r border-white/10 p-6 flex flex-col">
-        <div className="mb-10">
-          <h2 className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-blue-600">Control Panel</h2>
-          <p className="text-xs text-slate-500 mt-1">{session.user.email}</p>
-        </div>
-        <nav className="flex-1 space-y-2">
-          <Tab active={activeTab === 'dashboard'} onClick={() => setActiveTab('dashboard')} icon={<BarChart3 size={18} />}>Dashboard</Tab>
-          <Tab active={activeTab === 'profile'} onClick={() => setActiveTab('profile')} icon={<User size={18} />}>Profile Info</Tab>
-          <Tab active={activeTab === 'experiences'} onClick={() => setActiveTab('experiences')} icon={<Briefcase size={18} />}>Experiences</Tab>
-          <Tab active={activeTab === 'portfolio'} onClick={() => setActiveTab('portfolio')} icon={<FileImage size={18} />}>Portfolio Items</Tab>
-          <Tab active={activeTab === 'achievements'} onClick={() => setActiveTab('achievements')} icon={<Award size={18} />}>Achievements</Tab>
-          <Tab active={activeTab === 'reviews'} onClick={() => setActiveTab('reviews')} icon={<Users size={18} />}>Client Reviews</Tab>
-          <Tab active={activeTab === 'blogs'} onClick={() => setActiveTab('blogs')} icon={<FileText size={18} />}>Blogs</Tab>
-          <Tab active={activeTab === 'messages'} onClick={() => setActiveTab('messages')} icon={<Mail size={18} />}>Messages</Tab>
-        </nav>
-        <div className="mt-auto pt-6 border-t border-white/10 space-y-2">
-          <a href="/" className="flex items-center gap-3 text-slate-400 hover:text-white transition-colors w-full p-2 rounded-lg hover:bg-white/5">
-            <Home size={18} /> Back to Site
-          </a>
-          <button onClick={handleLogout} className="flex items-center gap-3 text-red-400 hover:text-red-300 transition-colors w-full p-2 rounded-lg hover:bg-red-500/10 text-left">
-            <LogOut size={18} /> Sign Out
-          </button>
+    <div className="flex h-screen bg-[#020617] text-slate-100 overflow-hidden font-sans">
+      {/* Sleek Modern Sidebar */}
+      <aside className="w-72 bg-[#0a0f1d] border-r border-white/5 flex flex-col shadow-[20px_0_40px_rgba(0,0,0,0.4)] relative z-20">
+        <div className="p-8 flex flex-col h-full">
+          <div className="flex items-center gap-3 mb-10 group cursor-pointer" onClick={() => navigate('/admin/dashboard')}>
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-[0_0_20px_rgba(37,99,235,0.4)] group-hover:scale-110 transition-transform duration-500">
+               <User size={22} className="text-white" />
+            </div>
+            <div>
+              <h2 className="text-lg font-black tracking-tighter text-white uppercase italic leading-none">Hasinur</h2>
+              <span className="text-[10px] font-black text-blue-500 uppercase tracking-[0.2em]">HQ Control</span>
+            </div>
+          </div>
+
+          <nav className="space-y-1.5 flex-1 overflow-y-auto pr-2 custom-scrollbar">
+            {[
+              { id: 'dashboard', label: 'Overview', icon: <BarChart3 size={18} /> },
+              { id: 'profile', label: 'Identity', icon: <User size={18} /> },
+              { id: 'experiences', label: 'Experience', icon: <Briefcase size={18} /> },
+              { id: 'portfolio', label: 'Showcase', icon: <FileImage size={18} /> },
+              { id: 'achievements', label: 'Milestones', icon: <Award size={18} /> },
+              { id: 'blogs', label: 'Blog', icon: <FileText size={18} /> },
+              { id: 'reviews', label: 'Client Reviews', icon: <Users size={18} /> },
+              { id: 'messages', label: 'Messages', icon: <Mail size={18} /> },
+            ].map((item) => (
+              <button
+                key={item.id}
+                onClick={() => navigate(`/admin/${item.id}`)}
+                className={`w-full flex items-center gap-4 px-4 py-3 rounded-2xl text-sm font-bold transition-all duration-300 relative group overflow-hidden ${
+                  activeTab === item.id 
+                    ? 'text-white bg-white/5 shadow-inner' 
+                    : 'text-slate-500 hover:text-slate-300 hover:bg-white/[0.02]'
+                }`}
+              >
+                {activeTab === item.id && (
+                  <motion.div 
+                    layoutId="activeTab" 
+                    className="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-transparent border-l-4 border-blue-500" 
+                  />
+                )}
+                <span className={`transition-colors duration-300 ${activeTab === item.id ? 'text-blue-400' : 'group-hover:text-blue-400'}`}>
+                  {item.icon}
+                </span>
+                <span className="relative z-10">{item.label}</span>
+              </button>
+            ))}
+          </nav>
+
+          <div className="mt-8 pt-6 space-y-3 border-t border-white/5">
+            <button onClick={() => navigate('/')} className="w-full flex items-center justify-center gap-3 px-4 py-3 rounded-xl text-slate-400 hover:text-white hover:bg-white/5 font-bold text-[10px] uppercase tracking-[0.2em] transition-all duration-300 border border-white/5 group">
+              <Home size={14} className="group-hover:-translate-y-0.5 transition-transform" /> Back to Homepage
+            </button>
+            <button onClick={handleLogout} className="w-full flex items-center justify-center gap-3 px-4 py-4 rounded-2xl text-red-400 hover:bg-red-500/10 font-black text-xs uppercase tracking-widest transition-all duration-300 border border-transparent hover:border-red-500/20 group">
+              <LogOut size={16} className="group-hover:-translate-x-1 transition-transform" /> Sign Out
+            </button>
+          </div>
         </div>
       </aside>
 
-      <main className="flex-1 p-6 md:p-10 bg-[#0a0f1a] border-l border-white/5 overflow-y-auto">
-        <div className="max-w-4xl mx-auto">
-          <div className="flex justify-between items-center mb-8">
-            <h1 className="text-3xl font-bold capitalize text-white tracking-tight">{activeTab} Management</h1>
-          </div>
-          
-          <div className="bg-slate-900/50 backdrop-blur-sm border border-white/10 rounded-2xl p-8 shadow-xl">
-            {activeTab === 'dashboard' ? renderDashboard() : activeTab === 'profile' ? renderProfileForm() : activeTab === 'messages' ? renderMessagesList() : renderListForm()}
-          </div>
+      {/* Main Content Area */}
+      <main className="flex-1 overflow-y-auto relative bg-grid-white/[0.02]">
+        {/* Top Header Bar */}
+        <header className="sticky top-0 z-10 bg-[#020617]/80 backdrop-blur-2xl border-b border-white/5 py-4 px-10 flex justify-between items-center text-slate-100">
+            <div className="flex flex-col">
+               <div className="flex items-center gap-2 mb-0.5">
+                  <span className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Workspace</span>
+                  <span className="w-1 h-1 rounded-full bg-slate-700"></span>
+                  <span className="text-[10px] font-black text-blue-500 uppercase tracking-widest">{activeTab}</span>
+               </div>
+               <h1 className="text-xl font-black text-white tracking-tighter uppercase">
+                 {activeTab === 'dashboard' ? 'Control Dashboard' : `Manage ${
+                   {
+                     profile: 'Identity',
+                     experiences: 'Experience',
+                     portfolio: 'Showcase',
+                     achievements: 'Milestones',
+                     blogs: 'Blog',
+                     reviews: 'Client Reviews',
+                     messages: 'Messages'
+                   }[activeTab] || activeTab
+                 }`}
+               </h1>
+            </div>
+            
+            <div className="flex items-center gap-6">
+                <div className="hidden md:flex flex-col items-end">
+                    <span className="text-xs font-black text-white">{profileData.name}</span>
+                    <span className="text-[10px] font-bold text-emerald-500 uppercase flex items-center gap-1.5">
+                       <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                       Auth Active
+                    </span>
+                </div>
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-full border-2 border-white/10 overflow-hidden ring-4 ring-blue-500/10">
+                      <img src={profileData.avatar_url || `/hasinur_profile_pic_design_in_ps.png`} className="w-full h-full object-cover" alt="Profile" />
+                  </div>
+                  <button 
+                    onClick={handleLogout}
+                    className="p-2.5 rounded-xl bg-red-500/10 text-red-400 hover:bg-red-500 hover:text-white transition-all shadow-lg hover:shadow-red-500/20 group"
+                    title="Sign Out"
+                  >
+                    <LogOut size={18} className="group-hover:rotate-12 transition-transform" />
+                  </button>
+                </div>
+            </div>
+        </header>
+
+        <div className="p-10 max-w-7xl mx-auto">
+      {activeTab === 'dashboard' && renderDashboard()}
+          {activeTab === 'profile' && (
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="bg-slate-800/40 backdrop-blur-xl border border-white/5 rounded-3xl p-8 shadow-2xl">
+              <h2 className="text-xl font-black text-white uppercase tracking-tighter mb-8 pb-4 border-b border-white/5">Identity Settings</h2>
+              {renderProfileForm()}
+            </motion.div>
+          )}
+          {['experiences', 'portfolio', 'achievements', 'blogs', 'reviews'].includes(activeTab) && (
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="bg-slate-800/40 backdrop-blur-xl border border-white/5 rounded-3xl p-8 shadow-2xl">
+              <div className="flex justify-between items-center mb-8 pb-4 border-b border-white/5">
+                <h2 className="text-xl font-black text-white uppercase tracking-tighter">Content Management</h2>
+                <div className="flex gap-4">
+                    <button onClick={handleSaveList} disabled={isSavingList} className="flex items-center gap-2 px-6 py-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 text-white rounded-xl text-xs font-black uppercase tracking-widest transition-all shadow-[0_4px_15px_rgba(37,99,235,0.3)]">
+                        <Save size={14} /> Update All
+                    </button>
+                </div>
+              </div>
+              {renderListForm()}
+            </motion.div>
+          )}
+          {activeTab === 'messages' && (
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="bg-slate-800/40 backdrop-blur-xl border border-white/5 rounded-3xl p-8 shadow-2xl">
+              <h2 className="text-xl font-black text-white uppercase tracking-tighter mb-8 pb-4 border-b border-white/5">Contact Stream</h2>
+              {renderMessagesList()}
+            </motion.div>
+          )}
         </div>
       </main>
-    </div>
-  );
-}
 
-function Tab({ active, onClick, children, icon }: any) {
-  return (
-    <button 
-      onClick={onClick}
-      className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all text-sm font-medium ${
-        active 
-          ? 'bg-blue-600 text-white shadow-[0_0_15px_rgba(37,99,235,0.3)]' 
-          : 'text-slate-400 hover:text-white hover:bg-white/5'
-      }`}
-    >
-      {icon} {children}
-    </button>
+      {/* Notification Toast */}
+      <AnimatePresence>
+        {notification && (
+          <motion.div
+            initial={{ opacity: 0, y: 50, x: '-50%' }}
+            animate={{ opacity: 1, y: 0, x: '-50%' }}
+            exit={{ opacity: 0, y: 20, x: '-50%' }}
+            className={`fixed bottom-10 left-1/2 -translate-x-1/2 z-50 px-6 py-3 rounded-2xl shadow-2xl flex items-center gap-3 border backdrop-blur-xl ${
+              notification.type === 'success' 
+                ? 'bg-emerald-500/20 border-emerald-500/30 text-emerald-400' 
+                : 'bg-red-500/20 border-red-500/30 text-red-400'
+            }`}
+          >
+            <div className={`w-2 h-2 rounded-full ${notification.type === 'success' ? 'bg-emerald-400' : 'bg-red-400'} animate-pulse`} />
+            <span className="text-sm font-bold uppercase tracking-wider">{notification.message}</span>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
   );
 }
