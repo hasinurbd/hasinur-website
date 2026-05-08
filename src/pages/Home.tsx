@@ -40,7 +40,15 @@ export default function Home() {
       } catch (e) {
         console.error('Title fetch error:', e);
       }
-      document.title = displayName === 'Portfolio' ? 'S M Hasinur Rahman' : `${displayName} | S M Hasinur Rahman`;
+      const baseTitle = 'S M Hasinur Rahman';
+      const path = location.pathname.substring(1);
+      const sectionName = path.charAt(0).toUpperCase() + path.slice(1);
+      
+      if (!path || path === 'home' || path === '/') {
+        document.title = baseTitle;
+      } else {
+        document.title = `${sectionName} | ${baseTitle}`;
+      }
     };
     fetchTitle();
   }, [location.pathname]);
