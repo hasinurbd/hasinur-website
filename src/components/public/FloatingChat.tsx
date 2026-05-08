@@ -96,8 +96,12 @@ export default function FloatingChat() {
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-white/10 bg-slate-800/50 rounded-t-2xl">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center text-white">
-              <Bot size={18} />
+            <div className="w-8 h-8 rounded-full border border-blue-500/50 overflow-hidden bg-slate-800">
+              <img 
+                src="https://jtcepxgoqbyfwljezndt.supabase.co/storage/v1/object/public/portfolio_assets/hasinur_profile_pic_design_in_ps.png" 
+                alt="Hasinur AI" 
+                className="w-full h-full object-cover"
+              />
             </div>
             <div>
               <h3 className="font-semibold text-white">Hasinur AI bot</h3>

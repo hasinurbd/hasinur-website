@@ -9,6 +9,13 @@ export default function Hero() {
   const [profile, setProfile] = useState(getMockProfile());
 
   useEffect(() => {
+    // Clear legacy dicebear avatars from cache
+    const cached = localStorage.getItem('mock_profile');
+    if (cached && (cached.includes('dicebear') || cached.includes('hasinur_profile_pic_design_in_ps.png?v=3'))) {
+      localStorage.removeItem('mock_profile');
+      window.location.reload();
+    }
+    
     if (hasSupabaseConfig) {
       const fetchProfile = async () => {
         try {
@@ -128,7 +135,7 @@ export default function Hero() {
             </motion.a>
           </div>
           
-          <div className="flex items-center gap-1.5 px-6 py-3 bg-slate-900/40 border border-white/5 rounded-[2rem] backdrop-blur-xl shadow-2xl">
+          <div className="flex items-center gap-2">
             <SocialLink href={profile.facebook_url || "https://facebook.com/hasinur01"} target="_blank" icon={<Facebook size={18} />} label="Facebook" />
             <SocialLink href={profile.instagram_url || "https://instagram.com/hasinur_rahman"} target="_blank" icon={<Instagram size={18} />} label="Instagram" />
             <SocialLink href={profile.linkedin_url || "https://linkedin.com/in/hasinurbd"} target="_blank" icon={<Linkedin size={18} />} label="LinkedIn" />
