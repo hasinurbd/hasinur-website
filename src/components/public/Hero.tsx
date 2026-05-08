@@ -25,6 +25,27 @@ export default function Hero() {
     }
   }, []);
 
+  const handleDownloadCV = async (e: React.MouseEvent) => {
+    if (!profile.resume_url || profile.resume_url === "#") return;
+    
+    try {
+      e.preventDefault();
+      const response = await fetch(profile.resume_url);
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', 'Resume_Hasinur.pdf');
+      document.body.appendChild(link);
+      link.click();
+      link.parentNode?.removeChild(link);
+      window.URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Download failed:", error);
+      window.open(profile.resume_url, '_blank');
+    }
+  };
+
   return (
     <section id="home" className="relative pt-24 pb-12 md:pt-32 md:pb-20 px-4 flex flex-col justify-center min-h-[85vh] items-center text-center overflow-hidden">
       {/* Background elements */}
@@ -55,7 +76,7 @@ export default function Hero() {
             className="relative w-32 h-32 md:w-40 md:h-40 rounded-full overflow-hidden border-4 border-slate-900 shadow-2xl bg-slate-800 select-none group"
           >
             <img 
-              src={profile.avatar_url && profile.avatar_url.length > 5 ? profile.avatar_url : "https://jtcepxgoqbyfwljezndt.supabase.co/storage/v1/object/public/portfolio_assets/hasinur_profile_pic_design_in_ps.png"} 
+              src={profile.avatar_url && profile.avatar_url.length > 5 && !profile.avatar_url.includes('dicebear') ? profile.avatar_url : "https://jtcepxgoqbyfwljezndt.supabase.co/storage/v1/object/public/portfolio_assets/hasinur_profile_pic_design_in_ps.png"} 
               alt={profile.name} 
               draggable={false}
               className="w-full h-full object-cover grayscale-[20%] group-hover:grayscale-0 transition-all duration-500 pointer-events-none"
@@ -99,7 +120,7 @@ export default function Hero() {
               whileHover={{ scale: 1.05, backgroundColor: "rgba(255, 255, 255, 0.1)" }}
               whileTap={{ scale: 0.95 }}
               href={profile.resume_url || "#"} 
-              download="CV.pdf" 
+              onClick={handleDownloadCV}
               className="flex items-center gap-3 px-8 py-4 bg-white/5 backdrop-blur-md text-white rounded-[2rem] font-black text-xs uppercase tracking-[0.2em] transition-all border border-white/10 hover:border-blue-500/30"
             >
               <Download size={16} className="text-blue-500" />

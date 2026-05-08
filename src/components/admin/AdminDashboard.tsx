@@ -286,7 +286,7 @@ export default function AdminDashboard({ session }: { session: any }) {
         <div>
           <label className="block text-sm font-bold text-blue-400 mb-2 uppercase tracking-wide">Upload Avatar Image</label>
           <div className="flex items-center gap-3">
-            <img src={profileData.avatar_url || `/hasinur_profile_pic_design_in_ps.png`} alt="Avatar" className="w-12 h-12 rounded-full object-cover border-2 border-blue-500 bg-slate-800" />
+            <img src={profileData.avatar_url || `https://jtcepxgoqbyfwljezndt.supabase.co/storage/v1/object/public/portfolio_assets/hasinur_profile_pic_design_in_ps.png`} alt="Avatar" className="w-12 h-12 rounded-full object-cover border-2 border-blue-500 bg-slate-800" />
             <span className="flex-1 w-full bg-slate-900/80 border border-blue-500/30 rounded-xl px-4 py-3 text-white/50 text-sm italic font-medium">Upload an image below to replace</span>
             <label className="flex-shrink-0 cursor-pointer bg-slate-800 hover:bg-slate-700 p-3 rounded-xl border border-white/10 transition-colors">
               {uploadingStates['avatar_url'] ? <span className="text-sm text-blue-400 animate-pulse">Uploading...</span> : <Upload size={20} className="text-blue-400" />}
@@ -1156,7 +1156,7 @@ export default function AdminDashboard({ session }: { session: any }) {
                 </div>
                 <div className="flex items-center gap-4">
                   <div className="w-10 h-10 rounded-full border-2 border-white/10 overflow-hidden ring-4 ring-blue-500/10">
-                      <img src={profileData.avatar_url || `/hasinur_profile_pic_design_in_ps.png`} className="w-full h-full object-cover" alt="Profile" />
+                      <img src={profileData.avatar_url || `https://jtcepxgoqbyfwljezndt.supabase.co/storage/v1/object/public/portfolio_assets/hasinur_profile_pic_design_in_ps.png`} className="w-full h-full object-cover" alt="Profile" />
                   </div>
                   <button 
                     onClick={handleLogout}
