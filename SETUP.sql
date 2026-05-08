@@ -96,6 +96,9 @@ CREATE TABLE IF NOT EXISTS site_stats (
   views BIGINT DEFAULT 0
 );
 
+-- Initialize global views counter
+INSERT INTO site_stats (id, views) VALUES ('global_views', 0) ON CONFLICT (id) DO NOTHING;
+
 -- 9. Storage Setup
 -- Run these one by one if they fail together
 -- INSERT INTO storage.buckets (id, name, public) VALUES ('portfolio_assets', 'portfolio_assets', true);

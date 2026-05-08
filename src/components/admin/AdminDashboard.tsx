@@ -112,9 +112,8 @@ export default function AdminDashboard({ session }: { session: any }) {
   const handleLogout = async () => {
     if (hasSupabaseConfig) {
       await supabase.auth.signOut();
-    } else {
-      window.location.reload();
     }
+    navigate('/admin');
   };
 
   const handleSaveProfile = async (e: React.FormEvent) => {
@@ -161,47 +160,23 @@ export default function AdminDashboard({ session }: { session: any }) {
         setEditingItemId(null);
       } else {
         const config = TABS_CONFIG[activeTab];
-        if (!config) return;
+        if (!config || activeTab === 'messages') {
+          if (activeTab === 'messages') showNotification('Messages are read-only from cloud.');
+          return;
+        }
 
         const toUpsert = listData.map(item => {
-          let cleanedItem: any = { id: item.id };
-          
-          if (activeTab === 'experiences') {
-            cleanedItem = { ...cleanedItem, company_institution: item.company_institution, role: item.role, status: item.status, type: item.type, description: item.description, bullet_points: item.bullet_points, date_range: item.date_range, image_url: item.image_url };
-          } else if (activeTab === 'portfolio') {
-            cleanedItem = { ...cleanedItem, title: item.title, category: item.category, description: item.description, image_url: item.image_url, link: item.link };
-          } else if (activeTab === 'achievements') {
-            cleanedItem = { ...cleanedItem, title: item.title, date: item.date, description: item.description, image_url: item.image_url, full_story_link: item.full_story_link, author: item.author };
-          } else if (activeTab === 'blogs') {
-            cleanedItem = { ...cleanedItem, title: item.title, content: item.content, image_url: item.image_url, published_at: item.published_at };
-          } else if (activeTab === 'reviews') {
-            cleanedItem = { ...cleanedItem, name: item.name, avatar_url: item.avatar_url, country_flag: item.country_flag, rating: item.rating, service_taken: item.service_taken, text: item.text };
-          }
-          
+          const { created_at, ...cleanedItem } = item;
           if (!cleanedItem.id || !cleanedItem.id.toString().includes('-')) {
             delete cleanedItem.id;
           }
           return cleanedItem;
         });
 
-        const toUpdate = toUpsert.filter(item => item.id);
-        const toInsert = toUpsert.filter(item => !item.id);
+        const { error } = await supabase.from(config.table).upsert(toUpsert, { onConflict: 'id' });
 
-        let hasError = false;
-        let errorMessage = '';
-
-        if (toUpdate.length > 0) {
-           const { error } = await supabase.from(config.table).upsert(toUpdate);
-           if (error) { hasError = true; errorMessage = error.message; }
-        }
-
-        if (toInsert.length > 0) {
-           const { error } = await supabase.from(config.table).insert(toInsert);
-           if (error) { hasError = true; errorMessage = error.message; }
-        }
-
-        if (hasError) {
-          showNotification(`Failed to save: ${errorMessage}`, 'error');
+        if (error) {
+          showNotification(`Failed to save: ${error.message}`, 'error');
         } else {
           showNotification(`${activeTab} updated & synced!`);
           setEditingItemId(null);

@@ -38,10 +38,10 @@ export default function Admin() {
       });
 
       if (authError) {
-        setError(authError.message);
+        setError(`Supabase Auth Error: ${authError.message}`);
       }
     } else {
-      setError('System Error: Database connection not configured. Please build the application with Supabase environment variables.');
+      setError('System Error: Database connection not configured. Please build the application with Supabase environment variables in AI Studio Secrets.');
     }
     setLoading(false);
   };
