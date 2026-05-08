@@ -1,14 +1,12 @@
 import { createClient } from '@supabase/supabase-js';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://jtcepxgoqbyfwljezndt.supabase.co';
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imp0Y2VweGdvcWJ5ZndsamV6bmR0Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgwNDU4OTQsImV4cCI6MjA5MzYyMTg5NH0.FjQ0LAj52h44s-AwGyONKhZWJNf1-jeiMfntqc1ZZQg';
 
 // Create a real client if keys exist, otherwise create a dummy client to avoid crashes
-export const supabase = (supabaseUrl && supabaseAnonKey) 
-  ? createClient(supabaseUrl, supabaseAnonKey)
-  : createClient('https://mock.supabase.co', 'mock-key', { auth: { persistSession: false } });
+export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
-export const hasSupabaseConfig = !!(supabaseUrl && supabaseAnonKey);
+export const hasSupabaseConfig = true; // Use true since we have fallbacks now
 
 export const uploadAsset = async (file: File): Promise<string | null> => {
   if (!hasSupabaseConfig) {
