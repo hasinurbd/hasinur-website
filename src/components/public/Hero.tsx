@@ -135,13 +135,13 @@ export default function Hero() {
             </motion.a>
           </div>
           
-          <div className="flex items-center gap-2">
-            <SocialLink href={profile.facebook_url || "https://facebook.com/hasinur01"} target="_blank" icon={<Facebook size={18} />} label="Facebook" />
-            <SocialLink href={profile.instagram_url || "https://instagram.com/hasinur_rahman"} target="_blank" icon={<Instagram size={18} />} label="Instagram" />
-            <SocialLink href={profile.linkedin_url || "https://linkedin.com/in/hasinurbd"} target="_blank" icon={<Linkedin size={18} />} label="LinkedIn" />
+          <div className="flex flex-wrap items-center justify-center gap-3">
+            <SocialLink href={profile.facebook_url || "https://facebook.com/hasinur01"} target="_blank" icon={<Facebook />} label="Facebook" />
+            <SocialLink href={profile.instagram_url || "https://instagram.com/hasinur_rahman"} target="_blank" icon={<Instagram />} label="Instagram" />
+            <SocialLink href={profile.linkedin_url || "https://linkedin.com/in/hasinurbd"} target="_blank" icon={<Linkedin />} label="LinkedIn" />
             <SocialLink href={profile.behance_url || "https://behance.net/hasinurbd"} target="_blank" icon={<BehanceIcon />} label="Behance" />
-            <SocialLink href={profile.twitter_url || "https://twitter.com/hasinurbd"} target="_blank" icon={<Twitter size={18} />} label="Twitter" />
-            <SocialLink href={profile.youtube_url || "https://youtube.com/@hasinurbd"} target="_blank" icon={<Youtube size={18} />} label="YouTube" />
+            <SocialLink href={profile.twitter_url || "https://twitter.com/hasinurbd"} target="_blank" icon={<Twitter />} label="Twitter" />
+            <SocialLink href={profile.youtube_url || "https://youtube.com/@hasinurbd"} target="_blank" icon={<Youtube />} label="YouTube" />
           </div>
         </div>
       </motion.div>
@@ -159,9 +159,9 @@ export default function Hero() {
   );
 }
 
-function BehanceIcon() {
+function BehanceIcon({ size = 20 }: { size?: number }) {
   return (
-    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+    <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
       <path d="M9 12a2 2 0 0 0-2-2H5v4h2a2 2 0 0 0 2-2z"/><path d="M9 18a3 3 0 0 0-3-3H5v5a1 1 0 0 0 1 1h3a3 3 0 0 0 0-6z"/><path d="M14 12h7a4 4 0 0 1 0 8h-7a4 4 0 0 1 0-8z"/><line x1="15" y1="9" x2="20" y2="9"/>
     </svg>
   );
@@ -170,16 +170,16 @@ function BehanceIcon() {
 function SocialLink({ href, icon, target, label }: { href: string; icon: React.ReactNode; target?: string; label: string }) {
   return (
     <motion.a 
-      whileHover={{ y: -3, scale: 1.15 }}
-      whileTap={{ scale: 0.9 }}
+      whileHover={{ y: -5, scale: 1.1, backgroundColor: "rgba(37, 99, 235, 0.2)" }}
+      whileTap={{ scale: 0.95 }}
       href={href} 
       target={target}
       title={label}
       rel={target === "_blank" ? "noopener noreferrer" : undefined}
-      className="w-10 h-10 flex items-center justify-center rounded-full bg-white/5 hover:bg-blue-600 text-slate-300 hover:text-white border border-white/10 hover:border-blue-400 transition-all duration-300 group shadow-sm"
+      className="md:w-12 md:h-12 w-11 h-11 flex items-center justify-center rounded-full bg-white/5 backdrop-blur-md text-slate-300 hover:text-white border border-white/10 hover:border-blue-500/50 transition-all duration-300 group shadow-xl"
     >
       <div className="group-hover:drop-shadow-[0_0_8px_rgba(255,255,255,0.5)] transition-all">
-        {React.cloneElement(icon as React.ReactElement, { size: 18, strokeWidth: 1.5 })}
+        {React.cloneElement(icon as React.ReactElement, { size: 19, strokeWidth: 1.5 })}
       </div>
     </motion.a>
   );

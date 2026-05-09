@@ -91,17 +91,35 @@ export default function Reviews() {
                   <h4 className="text-white font-bold flex items-center gap-2">
                     {review.name}
                     {review.country_flag && (
-                      <span className="text-lg flex items-center" title="Client Location/Company">
-                        {review.country_flag.startsWith('http') ? (
-                          <img 
-                            src={review.country_flag} 
-                            alt="Client Logo" 
-                            className="h-5 object-contain rounded-sm"
-                            onError={(e) => (e.currentTarget.style.display = 'none')}
-                          />
-                        ) : (
-                          review.country_flag
-                        )}
+                      <span className="text-lg flex items-center shrink-0" title="Client Location">
+                        {(() => {
+                          const flag = review.country_flag;
+                          if (flag.startsWith('http')) {
+                            return <img src={flag} alt="Flag" className="h-4 object-contain rounded-sm" onError={(e) => (e.currentTarget.style.display = 'none')} />;
+                          }
+                          
+                          // Check if it's an emoji flag or 2-letter code
+                          const isEmoji = /[\uD83C][\uDDE6-\uDDFF][\uD83C][\uDDE6-\uDDFF]/.test(flag);
+                          const isCode = /^[A-Z]{2}$/i.test(flag);
+                          
+                          if (isEmoji || isCode) {
+                            let code = '';
+                            if (isEmoji) {
+                              code = Array.from(flag)
+                                .map(char => String.fromCodePoint((char.codePointAt(0) || 0) - 127397))
+                                .join('')
+                                .toLowerCase();
+                            } else {
+                              code = flag.toLowerCase();
+                            }
+                            
+                            if (code.length === 2) {
+                              return <img src={`https://flagcdn.com/w40/${code}.png`} alt={code} className="h-4 w-6 object-cover rounded-sm shadow-sm border border-white/10" />;
+                            }
+                          }
+                          
+                          return <span className="text-sm font-bold text-slate-500">{flag}</span>;
+                        })()}
                       </span>
                     )}
                   </h4>

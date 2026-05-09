@@ -1012,27 +1012,27 @@ export default function AdminDashboard({ session }: { session: any }) {
                   }} placeholder="Rating (1-5)" className="bg-slate-900/50 border border-white/10 rounded-lg px-3 py-2 text-white text-sm flex-1" />
                   <div className="flex-1 flex gap-2">
                     <select 
-                      value={['🇺🇸','🇬🇧','🇨🇦','🇦🇺','🇩🇪','🇫🇷','🇮🇳','🇧🇩','🇦🇪','🇸🇦'].includes(item.country_flag) ? item.country_flag : ''} 
+                      value={['US','GB','CA','AU','DE','FR','IN','BD','AE','SA'].includes(item.country_flag) ? item.country_flag : ''} 
                       onChange={e => updateItem(item.id, 'country_flag', e.target.value)} 
                       className="bg-slate-900/50 border border-white/10 rounded-lg px-2 text-white text-sm w-32"
                     >
-                      <option value="">No Flag / Preset</option>
-                      <option value="🇺🇸">🇺🇸 United States</option>
-                      <option value="🇬🇧">🇬🇧 United Kingdom</option>
-                      <option value="🇨🇦">🇨🇦 Canada</option>
-                      <option value="🇦🇺">🇦🇺 Australia</option>
-                      <option value="🇩🇪">🇩🇪 Germany</option>
-                      <option value="🇫🇷">🇫🇷 France</option>
-                      <option value="🇮🇳">🇮🇳 India</option>
-                      <option value="🇧🇩">🇧🇩 Bangladesh</option>
-                      <option value="🇦🇪">🇦🇪 UAE</option>
-                      <option value="🇸🇦">🇸🇦 Saudi Arabia</option>
+                      <option value="">No Flag</option>
+                      <option value="US">🇺🇸 USA</option>
+                      <option value="GB">🇬🇧 UK</option>
+                      <option value="CA">🇨🇦 Canada</option>
+                      <option value="AU">🇦🇺 Australia</option>
+                      <option value="DE">🇩🇪 Germany</option>
+                      <option value="FR">🇫🇷 France</option>
+                      <option value="IN">🇮🇳 India</option>
+                      <option value="BD">🇧🇩 Bangladesh</option>
+                      <option value="AE">🇦🇪 UAE</option>
+                      <option value="SA">🇸🇦 Saudi Arabia</option>
                     </select>
                     <input 
                       type="text" 
                       value={item.country_flag || ''} 
                       onChange={e => updateItem(item.id, 'country_flag', e.target.value)} 
-                      placeholder="Or Custom (Flag/URL/Text)" 
+                      placeholder="Code (e.g. US) or URL" 
                       className="bg-slate-900/50 border border-white/10 rounded-lg px-3 py-2 text-white text-sm flex-1" 
                     />
                   </div>

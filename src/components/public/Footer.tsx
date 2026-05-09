@@ -64,10 +64,7 @@ export default function Footer() {
       <div className="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-12 mb-16">
         
         <div className="col-span-1 md:col-span-1">
-          <div className="flex items-center gap-4 mb-4">
-            <div className="w-12 h-12 rounded-full border-2 border-blue-500/50 overflow-hidden shadow-lg bg-slate-900">
-              <img src="https://jtcepxgoqbyfwljezndt.supabase.co/storage/v1/object/public/portfolio_assets/hasinur_profile_pic_design_in_ps.png?v=100" alt="Hasinur" className="w-full h-full object-cover" />
-            </div>
+          <div className="mb-4">
             <h3 className="text-3xl md:text-4xl font-black bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-blue-600 tracking-tighter leading-none">
                S M Hasinur Rahman
             </h3>
