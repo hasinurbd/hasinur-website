@@ -31,6 +31,9 @@ npm run build
 
 Then upload the contents of the `dist/` directory to your hosting provider.
 
+### 🌐 Vercel Note
+If you are deploying to **Vercel**, a `vercel.json` file is included in the project root to handle Single Page Application (SPA) routing. This ensures that refreshing the page on any route (like `/admin`) doesn't result in a 404 error.
+
 ## 🖼 Storage Setup
 To support image uploads in the Admin Panel:
 1.  Go to the **Storage** tab in Supabase.
