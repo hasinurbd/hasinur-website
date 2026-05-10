@@ -1,36 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Facebook, Linkedin, Twitter, Youtube, Download, Palette, CodeXml, Layers, Cpu, Figma, Instagram } from 'lucide-react';
-import { getMockProfile } from '../../lib/mockData';
-import { supabase, hasSupabaseConfig } from '../../lib/supabaseClient';
-import { motion, AnimatePresence } from 'motion/react';
+import { useProfile } from '../../lib/ProfileContext';
+import { motion } from 'motion/react';
 import { FloatingIcon, BackgroundBlobs } from './VisualElements';
 
 export default function Hero() {
-  const [profile, setProfile] = useState(getMockProfile());
-
-  useEffect(() => {
-    // Clear legacy dicebear avatars from cache
-    const cached = localStorage.getItem('mock_profile');
-    if (cached && (cached.includes('dicebear') || cached.includes('hasinur_profile_pic_design_in_ps.png?v=3'))) {
-      localStorage.removeItem('mock_profile');
-      window.location.reload();
-    }
-    
-    if (hasSupabaseConfig) {
-      const fetchProfile = async () => {
-        try {
-          const { data, error } = await supabase.from('profile_info').select('*').limit(1).maybeSingle();
-          if (data && !error) {
-            setProfile(data);
-            localStorage.setItem('mock_profile', JSON.stringify(data));
-          }
-        } catch (err) {
-          console.error('Hero profile fetch error:', err);
-        }
-      };
-      fetchProfile();
-    }
-  }, []);
+  const { profile, avatarUrl } = useProfile();
 
   const handleDownloadCV = async (e: React.MouseEvent) => {
     if (!profile.resume_url || profile.resume_url === "#") return;
@@ -83,7 +58,7 @@ export default function Hero() {
             className="relative w-32 h-32 md:w-40 md:h-40 rounded-full overflow-hidden border-4 border-slate-900 shadow-2xl bg-slate-800 select-none group"
           >
             <img 
-              src={profile.avatar_url && profile.avatar_url.length > 5 && !profile.avatar_url.includes('dicebear') ? profile.avatar_url : "https://jtcepxgoqbyfwljezndt.supabase.co/storage/v1/object/public/portfolio_assets/hasinur_profile_pic_design_in_ps.png"} 
+              src={avatarUrl} 
               alt={profile.name} 
               draggable={false}
               className="w-full h-full object-cover grayscale-[20%] group-hover:grayscale-0 transition-all duration-500 pointer-events-none"
@@ -105,7 +80,7 @@ export default function Hero() {
         {profile.bio && (
           <div 
             className="text-slate-400 max-w-xl text-sm md:text-base mb-8 leading-relaxed font-medium select-none px-4 drop-shadow-md"
-            dangerouslySetInnerHTML={{ __html: profile.bio || getMockProfile().bio }}
+            dangerouslySetInnerHTML={{ __html: profile.bio }}
           />
         )}
         
@@ -168,6 +143,7 @@ function BehanceIcon({ size = 20 }: { size?: number }) {
 }
 
 function SocialLink({ href, icon, target, label }: { href: string; icon: React.ReactNode; target?: string; label: string }) {
+  if (!href || href === "#") return null;
   return (
     <motion.a 
       whileHover={{ y: -5, scale: 1.1, backgroundColor: "rgba(37, 99, 235, 0.2)" }}

@@ -24,33 +24,14 @@ export default function Home() {
   const location = useLocation();
 
   useEffect(() => {
-    const fetchTitle = async () => {
-      let displayName = 'Portfolio';
-      try {
-        if (hasSupabaseConfig) {
-          const { data } = await supabase.from('profile_info').select('name').single();
-          if (data?.name) displayName = data.name;
-        } else {
-          const saved = localStorage.getItem('mock_profile');
-          if (saved) {
-             const profile = JSON.parse(saved);
-             if (profile.name) displayName = profile.name;
-          }
-        }
-      } catch (e) {
-        console.error('Title fetch error:', e);
-      }
-      const baseTitle = 'S M Hasinur Rahman';
-      const path = location.pathname.substring(1);
+    // Only set sub-page titles here, base title is handled by ProfileContext
+    const path = location.pathname.substring(1);
+    if (path && !['home', '/'].includes(path)) {
       const sectionName = path.charAt(0).toUpperCase() + path.slice(1);
-      
-      if (!path || path === 'home' || path === '/') {
-        document.title = baseTitle;
-      } else {
-        document.title = `${sectionName} | ${baseTitle}`;
-      }
-    };
-    fetchTitle();
+      const baseTitle = 'S M Hasinur Rahman'; // Fallback base title
+      document.title = `${sectionName} | ${baseTitle}`;
+    }
+    // No else block needed as ProfileContext useEffect will set the home title
   }, [location.pathname]);
 
   useEffect(() => {

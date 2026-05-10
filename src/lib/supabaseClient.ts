@@ -43,9 +43,42 @@ export const uploadAsset = async (file: File): Promise<string | null> => {
   const fileExt = file.name.split('.').pop();
   const fileName = `${Math.random().toString(36).substring(2, 15)}_${Date.now()}.${fileExt}`;
   
+  let fileToUpload = file;
+  
+  // Compress image if it's an image
+  if (file.type.startsWith('image/')) {
+    try {
+      const compressedDataUrl = await new Promise<string>((resolve) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const img = new Image();
+          img.onload = () => {
+            const canvas = document.createElement('canvas');
+            const MAX_WIDTH = 1200; // Better quality for real upload
+            const scaleSize = Math.min(1, MAX_WIDTH / img.width);
+            canvas.width = img.width * scaleSize;
+            canvas.height = img.height * scaleSize;
+            const ctx = canvas.getContext('2d');
+            ctx?.drawImage(img, 0, 0, canvas.width, canvas.height);
+            resolve(canvas.toDataURL('image/jpeg', 0.8));
+          };
+          img.src = e.target?.result as string;
+        };
+        reader.readAsDataURL(file);
+      });
+      
+      // Convert data URL back to File
+      const res = await fetch(compressedDataUrl);
+      const blob = await res.blob();
+      fileToUpload = new File([blob], fileName, { type: 'image/jpeg' });
+    } catch (e) {
+      console.warn('Compression failed, using original file:', e);
+    }
+  }
+
   const { error: uploadError } = await supabase.storage
     .from('portfolio_assets')
-    .upload(fileName, file);
+    .upload(fileName, fileToUpload);
 
   if (uploadError) {
     console.error('Upload Error:', uploadError);

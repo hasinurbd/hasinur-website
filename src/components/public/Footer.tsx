@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { supabase, hasSupabaseConfig } from '../../lib/supabaseClient';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { useProfile } from '../../lib/ProfileContext';
 
 export default function Footer() {
   const [viewCount, setViewCount] = useState(100000);
+  const { profile } = useProfile();
   const navigate = useNavigate();
   const location = useLocation();
   const isHome = location.pathname === '/' || location.pathname === '/home';
@@ -66,7 +68,7 @@ export default function Footer() {
         <div className="col-span-1 md:col-span-1">
           <div className="mb-4">
             <h3 className="text-3xl md:text-4xl font-black bg-clip-text text-transparent bg-gradient-to-r from-blue-400 to-blue-600 tracking-tighter leading-none">
-               S M Hasinur Rahman
+               {profile.name}
             </h3>
           </div>
           <p className="text-slate-400 text-sm md:text-base font-black leading-relaxed max-w-sm tracking-tighter">
@@ -94,11 +96,11 @@ export default function Footer() {
           <ul className="space-y-4">
             <li className="text-slate-400">
               <span className="text-slate-500 block text-[11px] font-black tracking-tighter mb-1 uppercase">Direct Line</span>
-              <a href="mailto:hasinurrahman.me@gmail.com" className="text-white hover:text-blue-400 transition-colors text-[13px] font-black tracking-tighter">hasinurrahman.me@gmail.com</a>
+              <a href={`mailto:${profile.email}`} className="text-white hover:text-blue-400 transition-colors text-[13px] font-black tracking-tighter">{profile.email}</a>
             </li>
             <li className="text-slate-400">
               <span className="text-slate-500 block text-[11px] font-black tracking-tighter mb-1 uppercase">Phone</span>
-              <a href="tel:+8801518914773" className="text-white hover:text-blue-400 transition-colors text-[13px] font-black tracking-tighter">+8801518914773</a>
+              <a href={`tel:${profile.phone}`} className="text-white hover:text-blue-400 transition-colors text-[13px] font-black tracking-tighter">{profile.phone}</a>
             </li>
             <li className="mt-2 text-right md:text-left">
               <div className="inline-flex items-center gap-2 bg-slate-900 border border-white/10 px-4 py-2 rounded-xl shadow-sm hover:border-blue-500/50 transition-all group">

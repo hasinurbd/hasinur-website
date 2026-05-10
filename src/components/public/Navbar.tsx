@@ -1,8 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Menu, X } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { supabase, hasSupabaseConfig } from '../../lib/supabaseClient';
-import { getMockProfile } from '../../lib/mockData';
+import { useProfile } from '../../lib/ProfileContext';
 
 const navLinks = [
     { name: 'Experience', href: '/experience' },
@@ -15,29 +14,10 @@ const navLinks = [
 export default function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-  const [avatarUrl, setAvatarUrl] = useState(getMockProfile().avatar_url);
+  const { avatarUrl, profile } = useProfile();
   const location = useLocation();
   const navigate = useNavigate();
   const isHome = location.pathname === '/' || location.pathname === '/home';
-
-  useEffect(() => {
-    if (hasSupabaseConfig) {
-      const fetchProfile = async () => {
-        try {
-          const { data, error } = await supabase.from('profile_info').select('avatar_url').single();
-          if (data && !error && data.avatar_url) {
-            setAvatarUrl(data.avatar_url);
-            const cached = JSON.parse(localStorage.getItem('mock_profile') || '{}');
-            cached.avatar_url = data.avatar_url;
-            localStorage.setItem('mock_profile', JSON.stringify(cached));
-          }
-        } catch (err) {
-          console.error('Navbar profile fetch error:', err);
-        }
-      };
-      fetchProfile();
-    }
-  }, []);
 
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 50);
@@ -90,7 +70,7 @@ export default function Navbar() {
           <div className="flex items-center gap-4">
             <a href="/" onClick={(e) => handleNavClick(e, '/')} className="group flex items-center gap-3">
               <div className="w-10 h-10 rounded-full border border-blue-500/50 overflow-hidden shadow-[0_0_12px_rgba(37,99,235,0.2)] bg-slate-900 group-hover:border-blue-400 transition-all">
-                <img src={avatarUrl && avatarUrl.length > 5 && !avatarUrl.includes('dicebear') ? avatarUrl : "https://jtcepxgoqbyfwljezndt.supabase.co/storage/v1/object/public/portfolio_assets/hasinur_profile_pic_design_in_ps.png"} alt="Profile" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                <img src={avatarUrl} alt="Profile" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
               </div>
               <div className="flex flex-col">
                 <span className="text-xl md:text-2xl font-black tracking-tighter text-white group-hover:text-blue-400 transition-colors leading-none whitespace-nowrap">HASINUR</span>
@@ -126,11 +106,11 @@ export default function Navbar() {
             {/* Logo and Details in Mobile Menu */}
             <div className="flex items-center gap-4 pb-6 border-b border-white/5">
               <div className="w-14 h-14 rounded-full border-2 border-blue-500/50 overflow-hidden shadow-lg bg-slate-900">
-                <img src={avatarUrl && avatarUrl.length > 5 && !avatarUrl.includes('dicebear') ? avatarUrl : "https://jtcepxgoqbyfwljezndt.supabase.co/storage/v1/object/public/portfolio_assets/hasinur_profile_pic_design_in_ps.png"} alt="Profile" className="w-full h-full object-cover" />
+                <img src={avatarUrl} alt="Profile" className="w-full h-full object-cover" />
               </div>
               <div className="flex flex-col">
-                <span className="text-2xl font-black tracking-tighter text-white">S M Hasinur Rahman</span>
-                <span className="text-xs font-black tracking-tighter text-blue-500 uppercase">CSE @ UIU • Full-Stack Developer</span>
+                <span className="text-2xl font-black tracking-tighter text-white">{profile.name}</span>
+                <span className="text-xs font-black tracking-tighter text-blue-500 uppercase">{profile.title}</span>
               </div>
             </div>
 
@@ -148,7 +128,7 @@ export default function Navbar() {
             </div>
             
             <div className="pt-6 border-t border-white/5">
-              <a href="mailto:hasinurrahman.me@gmail.com" className="block text-center px-6 py-4 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl font-black tracking-tighter transition-all shadow-lg shadow-blue-600/20">
+              <a href={`mailto:${profile.email}`} className="block text-center px-6 py-4 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl font-black tracking-tighter transition-all shadow-lg shadow-blue-600/20">
                 Let's Collaborate
               </a>
             </div>

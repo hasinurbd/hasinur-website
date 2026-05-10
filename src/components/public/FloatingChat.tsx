@@ -1,25 +1,13 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { MessageSquare, X, Send, Bot, User } from 'lucide-react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
+import { MessageSquare, X, Send } from 'lucide-react';
 import { cn } from '../../lib/utils';
-import { getMockProfile, mockExperiences, mockPortfolioItems } from '../../lib/mockData';
-
-const profile = getMockProfile();
-
-// Hardcoded QA dataset (can be moved to admin panel later)
-const faqs = [
-  { q: "What do you do?", a: "I specialize in Graphic Design, Social Media Management, Content Writing, and Web Development." },
-  { q: "What skills do you have?", a: "I have expertise in Photoshop, Illustrator, Premiere Pro, UI/UX Design, HTML/CSS, React, and team management." },
-  { q: "How can I contact you?", a: `You can reach me via email at ${profile.email} or call me at ${profile.phone}.` },
-  { q: "Where are you located?", a: `I am located in ${profile.location}.` },
-  { q: "What is your current role?", a: `I am currently the ${profile.title}.` },
-  { q: "What are your recent projects?", a: "Some of my recent work includes Brand Identity Design, UI/UX Website designs, and Social Media Strategy." },
-  { q: "Can you provide a resume?", a: `Yes! You can download my resume using the 'Download CV' button on the homepage, or visit: ${profile.resume_url || '#'}` }
-];
+import { useProfile } from '../../lib/ProfileContext';
 
 export default function FloatingChat() {
+  const { profile, avatarUrl } = useProfile();
   const [isOpen, setIsOpen] = useState(false);
   const [messages, setMessages] = useState<{role: 'user' | 'model', content: string}[]>([
-    { role: 'model', content: "Hi! I'm S M Hasinur Rahman's chatbot. Ask me about his skills, contact info, or projects." }
+    { role: 'model', content: `Hi! I'm ${profile.name}'s chatbot. Ask me about my skills, contact info, or projects.` }
   ]);
   const [inputValue, setInputValue] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -28,6 +16,17 @@ export default function FloatingChat() {
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isOpen]);
+
+  // Hardcoded QA dataset updated with dynamic profile
+  const faqs = useMemo(() => [
+    { q: "What do you do?", a: profile.title || "I specialize in Graphic Design, Social Media Management, Content Writing, and Web Development." },
+    { q: "What skills do you have?", a: "I have expertise in Photoshop, Illustrator, Premiere Pro, UI/UX Design, HTML/CSS, React, and team management." },
+    { q: "How can I contact you?", a: `You can reach me via email at ${profile.email} or call me at ${profile.phone}.` },
+    { q: "Where are you located?", a: `I am located in ${profile.location}.` },
+    { q: "What is your current role?", a: `I am currently the ${profile.title}.` },
+    { q: "What are your recent projects?", a: "Some of my recent work includes Brand Identity Design, UI/UX Website designs, and Social Media Strategy." },
+    { q: "Can you provide a resume?", a: `Yes! You can download my resume using the 'Download CV' button on the homepage, or visit: ${profile.resume_url || '#'}` }
+  ], [profile]);
 
   const handleSend = async (e?: React.FormEvent) => {
     e?.preventDefault();
@@ -44,7 +43,7 @@ export default function FloatingChat() {
       await new Promise(resolve => setTimeout(resolve, delay));
       
       const lowerInput = userMessage.toLowerCase();
-      let bestMatch = "I'm sorry, I don't have an answer for that right now. Please use the contact form to reach S M Hasinur directly!";
+      let bestMatch = `I'm sorry, I don't have an answer for that right now. Please use the contact form to reach ${profile.name} directly!`;
       
       // Simple intent classification
       if (lowerInput.includes('skill') || lowerInput.includes('know') || lowerInput.includes('can you do') || lowerInput.includes('expert')) {
@@ -59,7 +58,7 @@ export default function FloatingChat() {
         bestMatch = faqs.find(f => f.q.includes('located'))?.a || bestMatch;
       } else if (lowerInput.includes('hello') || lowerInput.includes('hi ') || lowerInput.includes('hey') || lowerInput.startsWith('hi')) {
         const greetings = ["Hello!", "Hi there!", "Hey! How can I help you today?"];
-        bestMatch = greetings[Math.floor(Math.random() * greetings.length)] + " Ask me about Hasinur's work, skills, or how to contact him.";
+        bestMatch = greetings[Math.floor(Math.random() * greetings.length)] + ` Ask me about ${profile.name}'s work, skills, or how to contact him.`;
       } else if (lowerInput.includes('what do you do') || lowerInput.includes('role') || lowerInput.includes('job') || lowerInput.includes('profession')) {
         bestMatch = faqs.find(f => f.q.includes('role') || f.q.includes('do you do'))?.a || bestMatch;
       } else if (lowerInput.includes('thanks') || lowerInput.includes('thank you')) {
@@ -98,7 +97,7 @@ export default function FloatingChat() {
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 rounded-full border border-blue-500/50 overflow-hidden bg-slate-800">
               <img 
-                src="https://jtcepxgoqbyfwljezndt.supabase.co/storage/v1/object/public/portfolio_assets/hasinur_profile_pic_design_in_ps.png" 
+                src={avatarUrl} 
                 alt="Hasinur AI" 
                 className="w-full h-full object-cover"
               />

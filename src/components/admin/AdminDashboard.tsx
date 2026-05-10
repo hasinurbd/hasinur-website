@@ -6,10 +6,12 @@ import { getMockProfile, saveMockProfile, getMockData, saveMockData, mockExperie
 import JoditEditor from 'jodit-react';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid, PieChart, Pie, Cell, BarChart, Bar } from 'recharts';
 import { useNavigate, useLocation } from 'react-router-dom';
+import { useProfile } from '../../lib/ProfileContext';
 
 export default function AdminDashboard({ session }: { session: any }) {
   const navigate = useNavigate();
   const location = useLocation();
+  const { profile, refreshProfile } = useProfile();
 
   const activeTab = useMemo(() => {
     const path = location.pathname.replace('/admin', '').replace('/', '');
@@ -25,9 +27,13 @@ export default function AdminDashboard({ session }: { session: any }) {
     messages: { table: 'messages', label: 'Messages', orderBy: 'created_at' }
   }), []);
 
-  const [profileData, setProfileData] = useState(getMockProfile());
+  const [profileData, setProfileData] = useState(profile);
   const [listData, setListData] = useState<any[]>([]);
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
+
+  useEffect(() => {
+    setProfileData(profile);
+  }, [profile]);
 
   useEffect(() => {
     document.title = `${profileData?.name || 'Portfolio'} | Admin - ${activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}`;
@@ -135,6 +141,7 @@ export default function AdminDashboard({ session }: { session: any }) {
           console.error('Database save error:', error);
           showNotification('Saved locally, but failed to sync to cloud: ' + error.message, 'error');
         } else {
+          await refreshProfile();
           showNotification('Profile updated successfully!');
         }
       } else {

@@ -106,7 +106,7 @@ export default function Reviews() {
                             let code = '';
                             if (isEmoji) {
                               code = Array.from(flag)
-                                .map(char => String.fromCodePoint((char.codePointAt(0) || 0) - 127397))
+                                .map((char: string) => String.fromCodePoint((char.codePointAt(0) || 0) - 127397))
                                 .join('')
                                 .toLowerCase();
                             } else {
