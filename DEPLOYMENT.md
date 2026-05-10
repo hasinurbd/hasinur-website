@@ -32,7 +32,10 @@ npm run build
 Then upload the contents of the `dist/` directory to your hosting provider.
 
 ### 🌐 Vercel Note
-If you are deploying to **Vercel**, a `vercel.json` file is included in the project root to handle Single Page Application (SPA) routing. This ensures that refreshing the page on any route (like `/admin`) doesn't result in a 404 error.
+If you are deploying to **Vercel**:
+1. A `vercel.json` file is included to handle Single Page Application (SPA) routing.
+2. **Environment Variables**: Make sure to add your Supabase credentials (`VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY`) in the Vercel Dashboard under **Project Settings > Environment Variables**.
+3. **Build Settings**: Vercel should automatically detect Vite. The framework preset should be "Vite" and the output directory should be `dist`.
 
 ## 🖼 Storage Setup
 To support image uploads in the Admin Panel:
