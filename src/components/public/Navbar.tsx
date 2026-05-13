@@ -69,7 +69,7 @@ export default function Navbar() {
         <div className="flex justify-between items-center">
           <div className="flex items-center gap-4">
             <a href="/" onClick={(e) => handleNavClick(e, '/')} className="group flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full border border-blue-500/50 overflow-hidden shadow-[0_0_12px_rgba(37,99,235,0.2)] bg-slate-900 group-hover:border-blue-400 transition-all">
+              <div className="w-10 h-10 rounded-full border border-blue-500/50 overflow-hidden shadow-[0_0_12px_rgba(37,99,235,0.2)] bg-transparent group-hover:border-blue-400 transition-all">
                 <img src={avatarUrl} alt="Profile" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
               </div>
               <div className="flex flex-col">
@@ -105,7 +105,7 @@ export default function Navbar() {
           <div className="px-6 py-8 space-y-6">
             {/* Logo and Details in Mobile Menu */}
             <div className="flex items-center gap-4 pb-6 border-b border-white/5">
-              <div className="w-14 h-14 rounded-full border-2 border-blue-500/50 overflow-hidden shadow-lg bg-slate-900">
+              <div className="w-14 h-14 rounded-full border-2 border-blue-500/50 overflow-hidden shadow-lg bg-transparent">
                 <img src={avatarUrl} alt="Profile" className="w-full h-full object-cover" />
               </div>
               <div className="flex flex-col">

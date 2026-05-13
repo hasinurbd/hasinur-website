@@ -245,13 +245,14 @@ export default function AdminDashboard({ session }: { session: any }) {
 
         const toUpsert = listData.map(item => {
           const { created_at, ...cleanedItem } = item;
+          // If ID is numeric (mock) or missing, delete it so Postgres triggers the DEFAULT gen_random_uuid()
           if (!cleanedItem.id || !cleanedItem.id.toString().includes('-')) {
             delete cleanedItem.id;
           }
           return cleanedItem;
         });
 
-        const { error } = await supabase.from(config.table).upsert(toUpsert, { onConflict: 'id' });
+        const { error } = await supabase.from(config.table).upsert(toUpsert, { onConflict: 'id', ignoreDuplicates: false });
 
         if (error) {
           showNotification(`Failed to save: ${error.message}`, 'error');
@@ -411,7 +412,7 @@ export default function AdminDashboard({ session }: { session: any }) {
         <div>
           <label className="block text-sm font-bold text-blue-400 mb-2 uppercase tracking-wide">Upload Avatar Image</label>
           <div className="flex items-center gap-3">
-            <img src={profileData.avatar_url || `https://jtcepxgoqbyfwljezndt.supabase.co/storage/v1/object/public/portfolio_assets/hasinur_profile_pic_design_in_ps.png`} alt="Avatar" className="w-12 h-12 rounded-full object-cover border-2 border-blue-500 bg-slate-800" />
+            <img src={profileData.avatar_url || `https://jtcepxgoqbyfwljezndt.supabase.co/storage/v1/object/public/portfolio_assets/hasinur_profile_pic_design_in_ps.png`} alt="Avatar" className="w-12 h-12 rounded-full object-cover border-2 border-blue-500 bg-transparent" />
             <span className="flex-1 w-full bg-slate-900/80 border border-blue-500/30 rounded-xl px-4 py-3 text-white/50 text-sm italic font-medium">Upload an image below to replace</span>
             <label className="flex-shrink-0 cursor-pointer bg-slate-800 hover:bg-slate-700 p-3 rounded-xl border border-white/10 transition-colors">
               {uploadingStates['avatar_url'] ? <span className="text-sm text-blue-400 animate-pulse">Uploading...</span> : <Upload size={20} className="text-blue-400" />}
@@ -1183,21 +1184,23 @@ export default function AdminDashboard({ session }: { session: any }) {
                             }
                           }
                         }}
-                        className={`group flex-1 ${isDraggingLogo === item.id + '_ach_main' ? 'bg-blue-600/20 border-blue-600 ring-2 ring-blue-500' : 'bg-slate-800 hover:bg-slate-700 border-white/10'} p-2 rounded-lg border transition-all flex items-center justify-center gap-2 relative min-h-[40px]`}
+                        className={`group flex-1 ${isDraggingLogo === item.id + '_ach_main' ? 'bg-blue-600/20 border-blue-600 ring-2 ring-blue-500' : 'bg-transparent border-white/10 hover:bg-white/5'} p-2 rounded-full border transition-all flex items-center justify-center gap-2 relative min-h-[40px] overflow-hidden`}
                       >
                         {uploadingStates[`${item.id}_image_url`] ? (
                           <span className="text-sm text-blue-400 animate-pulse">Uploading...</span>
                         ) : (
                           <>
-                            <label className="flex items-center gap-2 cursor-pointer w-full justify-center">
+                            <label className="flex items-center gap-2 cursor-pointer w-full h-full justify-center">
                               {item.image_url ? (
-                                <img src={item.image_url} alt="Cover" className="w-8 h-8 rounded object-contain" />
+                                <img src={item.image_url} alt="Cover" className="absolute inset-0 w-full h-full object-cover" />
                               ) : (
                                 <Upload size={16} className="text-blue-400" />
                               )}
-                              <span className="text-sm font-medium text-white group-hover:text-blue-400">
-                                {item.image_url ? 'Change Image (or Drop Here)' : 'Upload Image (or Drop Here)'}
-                              </span>
+                              {!item.image_url && (
+                                <span className="text-[10px] font-black text-white group-hover:text-blue-400 uppercase tracking-tighter">
+                                  Upload
+                                </span>
+                              )}
                               <input 
                                 type="file" 
                                 accept="image/*" 
@@ -1649,7 +1652,7 @@ export default function AdminDashboard({ session }: { session: any }) {
                           }
                         }
                       }}
-                      className={`group h-10 cursor-pointer rounded-lg border border-dashed transition-all flex items-center justify-center relative overflow-hidden
+                      className={`group h-12 w-12 cursor-pointer rounded-full border border-dashed transition-all flex items-center justify-center relative overflow-hidden
                         ${isDraggingLogo === item.id ? 'bg-blue-600/20 border-blue-600 ring-2 ring-blue-500/50' : 'bg-transparent border-white/10 hover:border-blue-500/50 hover:bg-white/5'}`}
                     >
                       {uploadingStates[`${item.id}_image_url`] ? (
@@ -1658,7 +1661,7 @@ export default function AdminDashboard({ session }: { session: any }) {
                         <div className="w-full h-full relative">
                           <label className="w-full h-full flex items-center justify-center cursor-pointer">
                             {item.image_url ? (
-                              <img src={item.image_url} alt="Logo" className="w-full h-full object-contain rounded-lg p-1" title="Change Logo (or Drop Here)" />
+                              <img src={item.image_url} alt="Logo" className="absolute inset-0 w-full h-full object-cover" title="Change Logo (or Drop Here)" />
                             ) : (
                               <Upload size={16} className={`text-blue-500 group-hover:scale-110 transition-transform ${isDraggingLogo === item.id ? 'scale-125' : ''}`} />
                             )}
@@ -1733,11 +1736,11 @@ export default function AdminDashboard({ session }: { session: any }) {
                       className="bg-slate-900/50 border border-white/10 rounded-lg px-3 py-2 text-white text-sm flex-1" 
                     />
                   </div>
-                  <label className="group flex-1 cursor-pointer bg-slate-800 hover:bg-slate-700 p-2 rounded-lg border border-white/10 transition-colors flex items-center justify-center gap-2">
+                  <label className="group flex-1 cursor-pointer bg-transparent hover:bg-white/5 p-2 rounded-full border border-white/10 transition-colors flex items-center justify-center gap-2 min-h-[40px] overflow-hidden">
                     {uploadingStates[`${item.id}_avatar_url`] ? <span className="text-sm text-blue-400 animate-pulse">Uploading...</span> : (
                       <>
-                        {item.avatar_url ? <img src={item.avatar_url} alt="Avatar" className="w-6 h-6 rounded object-cover border border-blue-500/50" /> : <Upload size={16} className="text-blue-400" />}
-                        <span className="text-sm font-medium text-white group-hover:text-blue-400">{item.avatar_url ? 'Change Avatar' : 'Upload Avatar'}</span>
+                        {item.avatar_url ? <img src={item.avatar_url} alt="Avatar" className="absolute inset-0 w-full h-full object-cover" /> : <Upload size={16} className="text-blue-400" />}
+                        {!item.avatar_url && <span className="text-xs font-medium text-white group-hover:text-blue-400">Upload Avatar</span>}
                       </>
                     )}
                     <input type="file" accept="image/*" disabled={uploadingStates[`${item.id}_avatar_url`]} onChange={(e) => handleListUpload(e, item.id, 'avatar_url')} className="hidden" />

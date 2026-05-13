@@ -55,7 +55,7 @@ export default function Hero() {
           <div className="absolute inset-0 rounded-full bg-gradient-to-tr from-blue-600 via-indigo-500 to-cyan-400 blur-lg opacity-40 group-hover:opacity-70 transition-opacity duration-500"></div>
           <motion.div 
             whileHover={{ scale: 1.05 }}
-            className="relative w-32 h-32 md:w-40 md:h-40 rounded-full overflow-hidden border-4 border-slate-900 shadow-2xl bg-slate-800 select-none group"
+            className="relative w-32 h-32 md:w-40 md:h-40 rounded-full overflow-hidden border-4 border-slate-900 shadow-2xl bg-transparent select-none group"
           >
             <img 
               src={avatarUrl} 
