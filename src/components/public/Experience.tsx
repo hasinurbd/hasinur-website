@@ -206,6 +206,12 @@ export default function Experience() {
                           <h3 className="text-base md:text-lg font-black text-white group-hover:text-blue-400 transition-colors leading-tight tracking-tight uppercase sm:whitespace-normal">{exp.role}</h3>
                           <div className={cn("flex flex-wrap items-center gap-2 mt-1", index % 2 !== 0 && "md:justify-end")}>
                              <span className="text-[10px] font-bold text-slate-400 tracking-wide break-words">{exp.company_institution}</span>
+                             {exp.subject && (
+                               <>
+                                 <span className="h-1 w-1 rounded-full bg-slate-600"></span>
+                                 <span className="text-[10px] font-bold text-blue-400/80 tracking-wide break-words">{exp.subject}</span>
+                               </>
+                             )}
                              {exp.status && <span className="h-1 w-1 rounded-full bg-blue-500 animate-pulse"></span>}
                              {exp.status && <span className="text-[7px] font-black text-blue-400 uppercase tracking-widest">{exp.status}</span>}
                           </div>

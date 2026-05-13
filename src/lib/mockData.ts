@@ -81,15 +81,25 @@ export const mockPortfolioItems = [
     id: '1',
     title: 'Poster Shorai',
     category: 'graphics',
+    description: 'Professional poster design and branding for Poster Shorai, focusing on minimalist aesthetics and impactful visual communication.',
     image_url: 'https://images.unsplash.com/photo-1572044162444-ad60f128bde2?auto=format&fit=crop&q=80&w=600',
-    link: 'https://www.postershorai.com/'
+    gallery: ['https://images.unsplash.com/photo-1572044162444-ad60f128bde2?auto=format&fit=crop&q=80&w=600'],
+    link: 'https://www.postershorai.com/',
+    likes: 124,
+    comments: [],
+    tags: ["Graphic Design", "Branding"]
   },
   {
     id: '2',
     title: 'PlastiXide',
     category: 'projects',
+    description: 'A comprehensive branding and digital marketing project for PlastiXide, a sustainable materials startup.',
     image_url: 'https://images.unsplash.com/photo-1547658719-da2b51169166?auto=format&fit=crop&q=80&w=600',
-    link: 'https://www.plastixide.com/'
+    gallery: ['https://images.unsplash.com/photo-1547658719-da2b51169166?auto=format&fit=crop&q=80&w=600'],
+    link: 'https://www.plastixide.com/',
+    likes: 56,
+    comments: [],
+    tags: ["UX Design", "Sustainability"]
   }
 ];
 
@@ -100,8 +110,16 @@ export const mockAchievements = [
     date: "2024-05-06T00:00:00.000Z",
     description: "<p>Recognition for <strong>outstanding community management</strong> and leadership at itel official group.</p>",
     image_url: "https://images.unsplash.com/photo-1552664730-d307ca884978?auto=format&fit=crop&q=80&w=800",
+    gallery: [
+      "https://images.unsplash.com/photo-1552664730-d307ca884978?auto=format&fit=crop&q=80&w=800",
+      "https://images.unsplash.com/photo-1522071820081-009f0129c71c?auto=format&fit=crop&q=80&w=800"
+    ],
     full_story_link: "#",
-    author: "itel Official"
+    author: "itel Official",
+    likes: 156,
+    comments: [
+      { id: '1', name: 'John Doe', text: 'Congrats Hasinur!', created_at: new Date().toISOString() }
+    ]
   },
   {
     id: '2',
@@ -109,8 +127,11 @@ export const mockAchievements = [
     date: "2023-11-12T00:00:00.000Z",
     description: "<ul><li>Received the Best Designer of the Year award at UIU Creative Club.</li><li>Recognized for <em>innovative</em> digital art.</li></ul>",
     image_url: "https://images.unsplash.com/photo-1507676184212-d03504fbdf08?auto=format&fit=crop&q=80&w=800",
+    gallery: ["https://images.unsplash.com/photo-1507676184212-d03504fbdf08?auto=format&fit=crop&q=80&w=800"],
     full_story_link: "https://www.google.com",
-    author: "University Club"
+    author: "University Club",
+    likes: 84,
+    comments: []
   },
   {
     id: '3',
@@ -118,8 +139,11 @@ export const mockAchievements = [
     date: "2023-04-20T00:00:00.000Z",
     description: "Won 1st place in National Content Writing competition across 50+ universities for crafting persuasive and creative articles.",
     image_url: "https://images.unsplash.com/photo-1455390582262-044cdead27d8?auto=format&fit=crop&q=80&w=800",
+    gallery: ["https://images.unsplash.com/photo-1455390582262-044cdead27d8?auto=format&fit=crop&q=80&w=800"],
     full_story_link: "https://www.medium.com",
-    author: "National Writing Board"
+    author: "National Writing Board",
+    likes: 92,
+    comments: []
   }
 ];
 
@@ -129,21 +153,30 @@ export const mockBlogs = [
     title: 'The Future of Social Media Marketing in 2026',
     content: '<p>Social media keeps evolving. In this post, we explore the major trends affecting designers, marketers, and brands...</p><ul><li>AI driven marketing</li><li>Video content</li><li>Community building</li></ul>',
     image_url: 'https://images.unsplash.com/photo-1611162617474-5b21e879e113?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80',
-    published_at: new Date().toISOString()
+    gallery: ['https://images.unsplash.com/photo-1611162617474-5b21e879e113?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80'],
+    published_at: new Date().toISOString(),
+    likes: 215,
+    comments: []
   },
   {
     id: '2',
     title: 'Creating Engaging Visuals for Web',
     content: '<p>A guide to <span style="color: #60a5fa;">optimizing</span> and designing images that grab attention immediately. Discover why <strong>typography</strong> and <em>color contrast</em> are so important.</p>',
     image_url: 'https://images.unsplash.com/photo-1561070791-2526d30994b5?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80',
-    published_at: new Date(Date.now() - 86400000 * 5).toISOString()
+    gallery: ['https://images.unsplash.com/photo-1561070791-2526d30994b5?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80'],
+    published_at: new Date(Date.now() - 86400000 * 5).toISOString(),
+    likes: 56,
+    comments: []
   },
   {
     id: '3',
     title: 'Balancing Code and Creativity',
     content: '<p>How I manage studying Computer Science and Engineering while maintaining my creative passions in writing and graphic design. It is a challenging but rewarding journey.</p>',
     image_url: 'https://images.unsplash.com/photo-1498050108023-c5249f4df085?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80',
-    published_at: new Date(Date.now() - 86400000 * 12).toISOString()
+    gallery: ['https://images.unsplash.com/photo-1498050108023-c5249f4df085?ixlib=rb-4.0.3&auto=format&fit=crop&w=1000&q=80'],
+    published_at: new Date(Date.now() - 86400000 * 12).toISOString(),
+    likes: 124,
+    comments: []
   }
 ];
 

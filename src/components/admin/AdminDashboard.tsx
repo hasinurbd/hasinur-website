@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { LogOut, Home, User, Briefcase, FileImage, Award, Save, Plus, Trash2, Mail, FileText, Upload, BarChart3, Users, Eye, MousePointerClick } from 'lucide-react';
+import { LogOut, Home, User, Briefcase, FileImage, Award, Save, Plus, Trash2, Mail, FileText, Upload, BarChart3, Users, Eye, MousePointerClick, Heart, MessageSquare, ArrowLeft, ArrowRight, ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase, hasSupabaseConfig, uploadAsset } from '../../lib/supabaseClient';
 import { getMockProfile, saveMockProfile, getMockData, saveMockData, mockExperiences, mockPortfolioItems, mockAchievements, mockBlogs, defaultMockProfile, mockReviews } from '../../lib/mockData';
@@ -7,6 +7,7 @@ import JoditEditor from 'jodit-react';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid, PieChart, Pie, Cell, BarChart, Bar } from 'recharts';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useProfile } from '../../lib/ProfileContext';
+import MultiImageHandler from './MultiImageHandler';
 
 export default function AdminDashboard({ session }: { session: any }) {
   const navigate = useNavigate();
@@ -19,7 +20,7 @@ export default function AdminDashboard({ session }: { session: any }) {
   }, [location.pathname]);
 
   const TABS_CONFIG: Record<string, { table: string, label: string, orderBy: string }> = useMemo(() => ({
-    experiences: { table: 'experiences', label: 'Experience', orderBy: 'created_at' },
+    experiences: { table: 'experiences', label: 'Experience', orderBy: 'start_date' },
     portfolio: { table: 'portfolio_items', label: 'Portfolio', orderBy: 'created_at' },
     achievements: { table: 'achievements', label: 'Achievements', orderBy: 'date' },
     blogs: { table: 'blogs', label: 'Blogs', orderBy: 'published_at' },
@@ -77,7 +78,14 @@ export default function AdminDashboard({ session }: { session: any }) {
           reviews: mockReviews,
           blogs: mockBlogs
         };
-        setListData(getMockData(key, defaultDataMap[activeTab] || []));
+        const rawData = getMockData(key, defaultDataMap[activeTab] || []);
+        // Local sorting
+        const sortedData = [...rawData].sort((a, b) => {
+          const dateA = a.date || a.published_at || a.start_date || a.created_at;
+          const dateB = b.date || b.published_at || b.start_date || b.created_at;
+          return new Date(dateB).getTime() - new Date(dateA).getTime();
+        });
+        setListData(sortedData);
       }
     } else {
       if (activeTab === 'profile') {
@@ -94,8 +102,13 @@ export default function AdminDashboard({ session }: { session: any }) {
       } else if (TABS_CONFIG[activeTab]) {
         const config = TABS_CONFIG[activeTab];
         const fetchData = async () => {
+          // Attempt sorting by configured field
           const { data, error } = await supabase.from(config.table).select('*').order(config.orderBy, { ascending: false });
-          if (data && !error && (data.length > 0 || activeTab === 'messages')) {
+          // If sorting fails (e.g. column missing), fallback to created_at
+          if (error && error.message.includes('column')) {
+            const { data: fallbackData } = await supabase.from(config.table).select('*').order('created_at', { ascending: false });
+            if (fallbackData) setListData(fallbackData);
+          } else if (data && (data.length > 0 || activeTab === 'messages')) {
             setListData(data);
           } else {
             const key = `mock_${activeTab}`;
@@ -198,13 +211,13 @@ export default function AdminDashboard({ session }: { session: any }) {
 
   const addItem = () => {
     const defaultDataMap: Record<string, any> = {
-      experiences: { company_institution: '', role: '', type: 'professional', bullet_points: [] },
-      portfolio: { title: '', category: 'graphics' },
+      experiences: { company_institution: '', role: '', type: 'professional', bullet_points: [], start_date: new Date().toISOString(), subject: '' },
+      portfolio: { title: '', category: 'graphics', likes: 0, comments: [] },
       reviews: { name: '', service_taken: '', rating: 5, country_flag: '', text: '' },
-      blogs: { title: '', published_at: new Date().toISOString() },
-      achievements: { title: '', date: new Date().toISOString() }
+      blogs: { title: '', published_at: new Date().toISOString(), likes: 0, comments: [] },
+      achievements: { title: '', date: new Date().toISOString(), likes: 0, comments: [] }
     };
-    const newItem = { id: Date.now().toString(), ...(defaultDataMap[activeTab] || { title: '' }) };
+    const newItem = { id: Date.now().toString(), ...(defaultDataMap[activeTab] || { title: '', likes: 0, comments: [] }) };
     setListData([newItem, ...listData]);
     setEditingItemId(newItem.id);
   };
@@ -224,6 +237,29 @@ export default function AdminDashboard({ session }: { session: any }) {
 
   const updateItem = (id: string, field: string, value: any) => {
     setListData(prevList => prevList.map(item => item.id === id ? { ...item, [field]: value } : item));
+  };
+
+  const [draggedIdx, setDraggedIdx] = useState<number | null>(null);
+  const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
+  const [isDraggingLogo, setIsDraggingLogo] = useState<string | null>(null);
+
+  const moveItemInArray = (id: string, field: string, fromIndex: number, toIndex: number) => {
+    const item = listData.find(i => i.id === id);
+    if (!item) return;
+    const arr = [...(item[field] || (item.image_url ? [item.image_url] : []))];
+    if (fromIndex < 0 || fromIndex >= arr.length || toIndex < 0 || toIndex >= arr.length) return;
+    const [removed] = arr.splice(fromIndex, 1);
+    arr.splice(toIndex, 0, removed);
+    
+    // Create updates object
+    const updates: any = { [field]: arr };
+    if (field === 'gallery' && toIndex === 0) {
+      updates.image_url = arr[0];
+    }
+    
+    setListData(prevList => prevList.map(it => it.id === id ? { ...it, ...updates } : it));
+    setDraggedIdx(null);
+    setDragOverIdx(null);
   };
 
   const handleProfileUpload = async (e: React.ChangeEvent<HTMLInputElement>, field: 'avatar_url' | 'resume_url') => {
@@ -428,36 +464,54 @@ export default function AdminDashboard({ session }: { session: any }) {
     blogs: 0,
     messages: 0,
     reviews: 0,
-    achievements: 0
+    achievements: 0,
+    totalLikes: 0
   });
 
   useEffect(() => {
     const fetchStats = async () => {
       if (hasSupabaseConfig) {
-        const [p, e, b, m, r, a] = await Promise.all([
-          supabase.from('portfolio_items').select('*', { count: 'exact', head: true }),
-          supabase.from('experiences').select('*', { count: 'exact', head: true }),
-          supabase.from('blogs').select('*', { count: 'exact', head: true }),
-          supabase.from('messages').select('*', { count: 'exact', head: true }),
-          supabase.from('client_reviews').select('*', { count: 'exact', head: true }),
-          supabase.from('achievements').select('*', { count: 'exact', head: true }),
-        ]);
-        setStats({
-          portfolio: p.count || 0,
-          experiences: e.count || 0,
-          blogs: b.count || 0,
-          messages: m.count || 0,
-          reviews: r.count || 0,
-          achievements: a.count || 0
-        });
+        try {
+          const [p, e, b, m, r, a] = await Promise.all([
+            supabase.from('portfolio_items').select('likes', { count: 'exact' }),
+            supabase.from('experiences').select('*', { count: 'exact', head: true }),
+            supabase.from('blogs').select('likes', { count: 'exact' }),
+            supabase.from('messages').select('*', { count: 'exact', head: true }),
+            supabase.from('client_reviews').select('*', { count: 'exact', head: true }),
+            supabase.from('achievements').select('likes', { count: 'exact' }),
+          ]);
+
+          const calculateLikes = (res: any) => {
+            if (res.error) return 0;
+            return res.data?.reduce((acc: number, curr: any) => acc + (curr.likes || 0), 0) || 0;
+          };
+
+          const totalLikes = calculateLikes(p) + calculateLikes(b) + calculateLikes(a);
+
+          setStats({
+            portfolio: p.count || 0,
+            experiences: e.count || 0,
+            blogs: b.count || 0,
+            messages: m.count || 0,
+            reviews: r.count || 0,
+            achievements: a.count || 0,
+            totalLikes
+          });
+        } catch (err) {
+          console.error('Error fetching admin stats:', err);
+        }
       } else {
+        const pLikes = mockPortfolioItems.reduce((acc, curr) => acc + (curr.likes || 0), 0);
+        const bLikes = mockBlogs.reduce((acc, curr) => acc + (curr.likes || 0), 0);
+        const aLikes = mockAchievements.reduce((acc, curr) => acc + (curr.likes || 0), 0);
         setStats({
           portfolio: mockPortfolioItems.length,
           experiences: mockExperiences.length,
           blogs: mockBlogs.length,
           messages: getMockData('mock_messages', []).length,
           reviews: mockReviews.length,
-          achievements: mockAchievements.length
+          achievements: mockAchievements.length,
+          totalLikes: pLikes + bLikes + aLikes
         });
       }
     };
@@ -491,9 +545,9 @@ export default function AdminDashboard({ session }: { session: any }) {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {[
             { label: 'Site Traffic', value: viewCount.toLocaleString(), trend: '+12.5%', icon: <Eye className="text-blue-400" />, color: 'blue' },
+            { label: 'Engagement', value: stats.totalLikes.toLocaleString(), trend: 'Growing', icon: <Heart className="text-red-400" />, color: 'red' },
             { label: 'Messages', value: stats.messages, trend: '+3', icon: <Mail className="text-emerald-400" />, color: 'emerald' },
             { label: 'Showcase Items', value: stats.portfolio, trend: 'Active', icon: <Briefcase className="text-indigo-400" />, color: 'indigo' },
-            { label: 'Client Satisfaction', value: '4.9', trend: 'Fantastic', icon: <Award className="text-amber-400" />, color: 'amber' },
           ].map((kpi, i) => (
             <motion.div 
               key={kpi.label}
@@ -679,19 +733,35 @@ export default function AdminDashboard({ session }: { session: any }) {
           <div key={item.id} className="bg-slate-800/30 border border-white/5 p-4 rounded-xl space-y-4">
             <div className="flex justify-between gap-4">
               {activeTab === 'experiences' ? (
-                <div className="flex-1 text-white font-bold px-3 py-2 bg-slate-900/50 rounded-lg border border-white/5 line-clamp-1">{item.company_institution || 'Experience Entry'}</div>
+                <div className="flex-1 text-white font-bold px-3 py-2 bg-slate-900/50 rounded-lg border border-white/5 line-clamp-1 sm:flex items-center gap-2">
+                  <span>{item.company_institution || 'Experience Entry'}</span>
+                  {item.subject && <span className="text-[10px] text-slate-400 font-medium px-2 py-0.5 bg-white/5 rounded border border-white/5">{item.subject}</span>}
+                </div>
               ) : activeTab === 'reviews' ? (
                 <div className="flex-1 text-white font-bold px-3 py-2 bg-slate-900/50 rounded-lg border border-white/5 line-clamp-1">{item.name || 'Client Review'}</div>
               ) : editingItemId === item.id ? (
-                <input 
-                  type="text" 
-                  value={item.title || ''} 
-                  onChange={e => updateItem(item.id, 'title', e.target.value)}
-                  placeholder="Title"
-                  className="flex-1 bg-slate-900/50 border border-white/10 rounded-lg px-3 py-2 text-white text-sm"
-                />
+                <div className="flex-1 bg-slate-900/10 rounded-lg border border-white/5 px-2 py-1 flex items-center">
+                   <span className="text-slate-500 text-[10px] font-black uppercase px-2">Editing:</span>
+                   <span className="text-white font-bold truncate">{item.title || item.name || item.company_institution || 'Untitled'}</span>
+                </div>
               ) : (
-                <div className="flex-1 text-white font-bold px-3 py-2 bg-slate-900/50 rounded-lg border border-white/5 line-clamp-1">{item.title || 'Untitled'}</div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-white font-bold px-3 py-2 bg-slate-900/50 rounded-lg border border-white/5 line-clamp-1 flex items-center justify-between gap-4">
+                    <span>{item.title || 'Untitled'}</span>
+                    <div className="flex items-center gap-3 shrink-0">
+                      {item.likes > 0 && (
+                        <div className="flex items-center gap-1.5 px-2 py-0.5 bg-red-500/10 text-red-500 rounded-full text-[9px] font-black uppercase">
+                          <Heart size={10} fill="currentColor" /> {item.likes}
+                        </div>
+                      )}
+                      {item.comments?.length > 0 && (
+                        <div className="flex items-center gap-1.5 px-2 py-0.5 bg-blue-500/10 text-blue-500 rounded-full text-[9px] font-black uppercase">
+                           <MessageSquare size={10} /> {item.comments.length}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
               )}
                 <div className="flex gap-2 items-center">
                   <button 
@@ -740,88 +810,469 @@ export default function AdminDashboard({ session }: { session: any }) {
                 </div>
             </div>
             {activeTab === 'portfolio' && editingItemId === item.id && (
-              <div className="grid grid-cols-1 gap-4">
-                <input type="text" value={item.link || ''} onChange={e => updateItem(item.id, 'link', e.target.value)} placeholder="Live Website Preview URL (e.g., https://my-site.com)" className="bg-slate-900/50 border border-white/10 rounded-lg px-3 py-2 text-white text-sm" />
-                <div className="flex gap-4">
-                  <div className="flex-1 flex gap-2">
-                    <select 
-                      value={['graphics', 'video', 'web', 'projects'].includes(item.category) ? item.category : 'custom'} 
-                      onChange={e => {
-                        if (e.target.value !== 'custom') {
-                          updateItem(item.id, 'category', e.target.value)
-                        }
-                      }} 
-                      className="bg-slate-900/50 border border-white/10 rounded-lg px-3 py-2 text-white text-sm w-32 shrink-0"
-                    >
-                      <option value="graphics">Graphics</option>
-                      <option value="video">Video</option>
-                      <option value="web">Web</option>
-                      <option value="projects">Projects</option>
-                      <option value="custom">Custom...</option>
-                    </select>
-                    <input 
-                      type="text" 
-                      value={item.category || ''} 
-                      onChange={e => updateItem(item.id, 'category', e.target.value)} 
-                      placeholder="Category (e.g. Logo, App, Branding)" 
-                      className="bg-slate-900/50 border border-white/10 rounded-lg px-3 py-2 text-white text-sm flex-1" 
-                    />
+              <div className="grid grid-cols-1 gap-6">
+                <div className="flex flex-col md:flex-row gap-4">
+                  <div className="flex-1">
+                    <label className="block text-[10px] uppercase font-black text-slate-500 mb-1 ml-1">Project Title</label>
+                    <input type="text" value={item.title || ''} onChange={e => updateItem(item.id, 'title', e.target.value)} placeholder="e.g. Minimalist Branding" className="w-full bg-slate-900/50 border border-white/10 rounded-lg px-3 py-2 text-white text-sm" />
                   </div>
-                  <label className="group flex-1 cursor-pointer bg-slate-800 hover:bg-slate-700 p-2 rounded-lg border border-white/10 transition-colors flex items-center justify-center gap-2">
-                    {uploadingStates[`${item.id}_image_url`] ? <span className="text-sm text-blue-400 animate-pulse">Uploading...</span> : (
-                      <>
-                        {item.image_url ? <img src={item.image_url} alt="Cover" className="w-6 h-6 rounded object-cover border border-blue-500/50" /> : <Upload size={16} className="text-blue-400" />}
-                        <span className="text-sm font-medium text-white group-hover:text-blue-400">{item.image_url ? 'Change Image' : 'Upload Image File'}</span>
-                      </>
-                    )}
-                    <input type="file" accept="image/*" disabled={uploadingStates[`${item.id}_image_url`]} onChange={(e) => handleListUpload(e, item.id, 'image_url')} className="hidden" />
-                  </label>
+                  <div className="flex-1">
+                    <label className="block text-[10px] uppercase font-black text-slate-500 mb-1 ml-1">Live Link / Source</label>
+                    <input type="text" value={item.link || ''} onChange={e => updateItem(item.id, 'link', e.target.value)} placeholder="https://..." className="w-full bg-slate-900/50 border border-white/10 rounded-lg px-3 py-2 text-white text-sm" />
+                  </div>
                 </div>
-                {item.category === 'projects' && (
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                   <div className="space-y-3">
+                    <label className="block text-[10px] uppercase font-black text-slate-500 ml-1">Visual Gallery (Multi-Upload)</label>
+                    <div className="grid grid-cols-4 gap-2">
+                       {(item.gallery || (item.image_url ? [item.image_url] : [])).map((url: string, imgIdx: number) => (
+                         <div 
+                           key={imgIdx} 
+                           draggable
+                           onDragStart={(e) => {
+                             setDraggedIdx(imgIdx);
+                             e.dataTransfer.setData('fromIdx', imgIdx.toString());
+                             e.dataTransfer.effectAllowed = 'move';
+                           }}
+                           onDragOver={(e) => {
+                             e.preventDefault();
+                             setDragOverIdx(imgIdx);
+                           }}
+                           onDragLeave={() => setDragOverIdx(null)}
+                           onDrop={(e) => {
+                             e.preventDefault();
+                             const fromIdx = parseInt(e.dataTransfer.getData('fromIdx'));
+                             if (!isNaN(fromIdx)) moveItemInArray(item.id, 'gallery', fromIdx, imgIdx);
+                           }}
+                           className={`relative aspect-square rounded-xl overflow-hidden border transition-all group bg-slate-800 cursor-move 
+                             ${dragOverIdx === imgIdx ? 'border-blue-500 scale-105 z-10 shadow-xl shadow-blue-500/20' : 'border-white/10'}
+                             ${draggedIdx === imgIdx ? 'opacity-40 grayscale' : 'opacity-100'}`}
+                         >
+                           <img src={url} className="w-full h-full object-cover pointer-events-none" referrerPolicy="no-referrer" />
+                           <div className="absolute inset-0 bg-slate-950/80 flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                             <button 
+                               onClick={(e) => {
+                                 e.stopPropagation();
+                                 const currentGallery = item.gallery || (item.image_url ? [item.image_url] : []);
+                                 const newGallery = currentGallery.filter((_: any, i: number) => i !== imgIdx);
+                                 updateItem(item.id, 'gallery', newGallery);
+                                 if (imgIdx === 0) updateItem(item.id, 'image_url', newGallery[0] || '');
+                               }}
+                               className="p-1.5 bg-red-500/20 text-red-500 rounded-lg hover:bg-red-500 hover:text-white transition-all shadow-lg"
+                               title="Delete"
+                             >
+                               <Trash2 size={12} />
+                             </button>
+                             
+                             <div className="flex flex-col gap-1">
+                               {imgIdx > 0 && (
+                                 <button 
+                                   onClick={(e) => { e.stopPropagation(); moveItemInArray(item.id, 'gallery', imgIdx, imgIdx - 1); }}
+                                   className="p-1 bg-white/10 text-white rounded hover:bg-blue-600 transition-colors"
+                                   title="Move Left"
+                                 >
+                                   <ChevronLeft size={10} />
+                                 </button>
+                               )}
+                               {imgIdx < (item.gallery || [item.image_url]).length - 1 && (
+                                 <button 
+                                   onClick={(e) => { e.stopPropagation(); moveItemInArray(item.id, 'gallery', imgIdx, imgIdx + 1); }}
+                                   className="p-1 bg-white/10 text-white rounded hover:bg-blue-600 transition-colors"
+                                   title="Move Right"
+                                 >
+                                   <ChevronRight size={10} />
+                                 </button>
+                               )}
+                             </div>
+
+                             {imgIdx > 0 && (
+                               <button 
+                                 onClick={(e) => {
+                                   e.stopPropagation();
+                                   const gallery = [...(item.gallery || [item.image_url])];
+                                   [gallery[imgIdx], gallery[0]] = [gallery[0], gallery[imgIdx]];
+                                   updateItem(item.id, 'gallery', gallery);
+                                   updateItem(item.id, 'image_url', gallery[0]);
+                                 }}
+                                 className="p-1.5 bg-blue-500/20 text-blue-500 rounded-lg hover:bg-blue-500 hover:text-white transition-all shadow-lg"
+                                 title="Set as Cover"
+                               >
+                                 <Plus size={12} className="rotate-45" />
+                               </button>
+                             )}
+                           </div>
+                           {imgIdx === 0 && (
+                             <div className="absolute bottom-0 left-0 right-0 bg-blue-600 py-0.5 text-center text-[7px] font-black uppercase tracking-widest text-white">Cover</div>
+                           )}
+                         </div>
+                       ))}
+                       <label className="aspect-square rounded-xl border-2 border-dashed border-white/10 flex flex-col items-center justify-center cursor-pointer hover:border-blue-500/50 hover:bg-blue-500/5 transition-all group">
+                         {uploadingStates[`${item.id}_gallery`] ? (
+                           <div className="flex flex-col items-center">
+                             <Upload size={16} className="text-blue-500 animate-bounce" />
+                             <span className="text-[7px] font-black uppercase text-blue-400 mt-1">Syncing</span>
+                           </div>
+                         ) : (
+                           <>
+                             <Plus size={20} className="text-slate-500 group-hover:text-blue-500 transition-colors" />
+                             <span className="text-[8px] font-black uppercase text-slate-600 mt-1">Add Photo</span>
+                           </>
+                         )}
+                         <input
+                           type="file"
+                           className="hidden"
+                           accept="image/*"
+                           disabled={uploadingStates[`${item.id}_gallery`]}
+                           onChange={async (e) => {
+                             const file = e.target.files?.[0];
+                             if (file) {
+                               setUploadingStates(prev => ({ ...prev, [`${item.id}_gallery`]: true }));
+                               const url = await uploadAsset(file);
+                               if (url) {
+                                 const currentGallery = item.gallery || (item.image_url ? [item.image_url] : []);
+                                 const newGallery = [...currentGallery, url];
+                                 updateItem(item.id, 'gallery', newGallery);
+                                 if (!item.image_url) updateItem(item.id, 'image_url', url);
+                               }
+                               setUploadingStates(prev => ({ ...prev, [`${item.id}_gallery`]: false }));
+                             }
+                           }}
+                         />
+                       </label>
+                    </div>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div>
+                      <label className="block text-[10px] uppercase font-black text-slate-500 mb-1 ml-1">Categorization</label>
+                      <div className="flex gap-2">
+                        <select 
+                          value={['graphics', 'video', 'web', 'projects'].includes(item.category) ? item.category : 'custom'} 
+                          onChange={e => { if (e.target.value !== 'custom') updateItem(item.id, 'category', e.target.value) }} 
+                          className="bg-slate-900 border border-white/10 rounded-lg px-3 py-2 text-white text-sm w-32 shrink-0"
+                        >
+                          <option value="graphics">Graphics</option>
+                          <option value="video">Video</option>
+                          <option value="web">Web</option>
+                          <option value="projects">Projects</option>
+                          <option value="custom">Custom...</option>
+                        </select>
+                        <input 
+                          type="text" 
+                          value={item.category || ''} 
+                          onChange={e => updateItem(item.id, 'category', e.target.value)} 
+                          placeholder="Subtitle (e.g. Logo Design)" 
+                          className="bg-slate-900/50 border border-white/10 rounded-lg px-3 py-2 text-white text-sm flex-1" 
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-[10px] uppercase font-black text-slate-500 mb-1 ml-1">Tools / Skills (Comma Separated)</label>
+                      <input 
+                        type="text" 
+                        value={(item.tags || []).join(', ')} 
+                        onChange={e => updateItem(item.id, 'tags', e.target.value.split(',').map(t => t.trim()))} 
+                        placeholder="Photoshop, Illustrator, Figma" 
+                        className="w-full bg-slate-900/50 border border-white/10 rounded-lg px-3 py-2 text-white text-sm" 
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] uppercase font-black text-slate-500 mb-1 ml-1">Deep Details / Content</label>
                   <JoditEditor value={item.description || ''} config={editorConfig} onBlur={newContent => updateItem(item.id, 'description', newContent)} />
-                )}
+                </div>
               </div>
             )}
             {activeTab === 'achievements' && editingItemId === item.id && (
               <div className="grid grid-cols-1 gap-4">
-                <input type="text" value={item.full_story_link || ''} onChange={e => updateItem(item.id, 'full_story_link', e.target.value)} placeholder="Certificate Link URL" className="bg-slate-900/50 border border-white/10 rounded-lg px-3 py-2 text-white text-sm" />
                 <div className="flex gap-4">
-                  <input type="date" value={item.date ? item.date.split('T')[0] : ''} onChange={e => updateItem(item.id, 'date', new Date(e.target.value).toISOString())} className="bg-slate-900/50 border border-white/10 rounded-lg px-3 py-2 text-white text-sm flex-1" />
-                  <label className="group flex-1 cursor-pointer bg-slate-800 hover:bg-slate-700 p-2 rounded-lg border border-white/10 transition-colors flex items-center justify-center gap-2">
-                    {uploadingStates[`${item.id}_image_url`] ? <span className="text-sm text-blue-400 animate-pulse">Uploading...</span> : (
+                  <div className="flex-1">
+                    <label className="block text-[10px] uppercase font-black text-slate-500 mb-1 ml-1">Title</label>
+                    <input type="text" value={item.title || ''} onChange={e => updateItem(item.id, 'title', e.target.value)} placeholder="Achievement Title" className="w-full bg-slate-900/50 border border-white/10 rounded-lg px-3 py-2 text-white text-sm" />
+                  </div>
+                  <div className="flex-1">
+                    <label className="block text-[10px] uppercase font-black text-slate-500 mb-1 ml-1">Issuer / Author</label>
+                    <input type="text" value={item.author || ''} onChange={e => updateItem(item.id, 'author', e.target.value)} placeholder="e.g. itel Official" className="w-full bg-slate-900/50 border border-white/10 rounded-lg px-3 py-2 text-white text-sm" />
+                  </div>
+                </div>
+                <div className="flex-1">
+                  <label className="block text-[10px] uppercase font-black text-slate-500 mb-1 ml-1">Certificate / Story Link</label>
+                  <input type="text" value={item.full_story_link || ''} onChange={e => updateItem(item.id, 'full_story_link', e.target.value)} placeholder="Certificate Link URL" className="w-full bg-slate-900/50 border border-white/10 rounded-lg px-3 py-2 text-white text-sm" />
+                </div>
+                <div className="flex gap-4">
+                  <div className="flex-1">
+                    <label className="block text-[10px] uppercase font-black text-slate-500 mb-1 ml-1">Date Achieved</label>
+                    <input type="date" value={item.date ? item.date.split('T')[0] : ''} onChange={e => updateItem(item.id, 'date', new Date(e.target.value).toISOString())} className="w-full bg-slate-900/50 border border-white/10 rounded-lg px-3 py-2 text-white text-sm" />
+                  </div>
+                  <div className="group flex-1 bg-slate-800 hover:bg-slate-700 p-2 rounded-lg border border-white/10 transition-colors flex items-center justify-center gap-2 relative">
+                    {uploadingStates[`${item.id}_image_url`] ? (
+                      <span className="text-sm text-blue-400 animate-pulse">Uploading...</span>
+                    ) : (
                       <>
-                        {item.image_url ? <img src={item.image_url} alt="Cover" className="w-6 h-6 rounded object-cover border border-blue-500/50" /> : <Upload size={16} className="text-blue-400" />}
-                        <span className="text-sm font-medium text-white group-hover:text-blue-400">{item.image_url ? 'Change Image' : 'Upload Image File'}</span>
+                        <label className="flex items-center gap-2 cursor-pointer w-full justify-center">
+                          {item.image_url ? (
+                            <img src={item.image_url} alt="Cover" className="w-6 h-6 rounded object-cover border border-blue-500/50" />
+                          ) : (
+                            <Upload size={16} className="text-blue-400" />
+                          )}
+                          <span className="text-sm font-medium text-white group-hover:text-blue-400">
+                            {item.image_url ? 'Change Image' : 'Upload Image File'}
+                          </span>
+                          <input 
+                            type="file" 
+                            accept="image/*" 
+                            disabled={uploadingStates[`${item.id}_image_url`]} 
+                            onChange={(e) => handleListUpload(e, item.id, 'image_url')} 
+                            className="hidden" 
+                          />
+                        </label>
+                        {item.image_url && (
+                          <button 
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              updateItem(item.id, 'image_url', '');
+                            }}
+                            className="absolute top-1 right-1 p-0.5 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
+                            title="Remove Image"
+                          >
+                            <X size={10} />
+                          </button>
+                        )}
                       </>
                     )}
-                    <input type="file" accept="image/*" disabled={uploadingStates[`${item.id}_image_url`]} onChange={(e) => handleListUpload(e, item.id, 'image_url')} className="hidden" />
-                  </label>
+                  </div>
                 </div>
                 <JoditEditor value={item.description || ''} config={editorConfig} onBlur={newContent => updateItem(item.id, 'description', newContent)} />
+                
+                <div className="space-y-3 mt-4 pt-4 border-t border-white/5">
+                  <label className="block text-sm font-bold text-blue-400 uppercase tracking-wide">Image Gallery (Multi-Photo - Drag to Reorder)</label>
+                  <div className="grid grid-cols-5 gap-2">
+                     {(item.gallery || (item.image_url ? [item.image_url] : [])).map((url: string, imgIdx: number) => (
+                       <div 
+                         key={imgIdx} 
+                         draggable
+                         onDragStart={(e) => {
+                           setDraggedIdx(imgIdx);
+                           e.dataTransfer.setData('fromIdx', imgIdx.toString());
+                           e.dataTransfer.effectAllowed = 'move';
+                         }}
+                         onDragOver={(e) => {
+                           e.preventDefault();
+                           setDragOverIdx(imgIdx);
+                         }}
+                         onDragLeave={() => setDragOverIdx(null)}
+                         onDrop={(e) => {
+                           e.preventDefault();
+                           const fromIdx = parseInt(e.dataTransfer.getData('fromIdx'));
+                           if (!isNaN(fromIdx)) moveItemInArray(item.id, 'gallery', fromIdx, imgIdx);
+                         }}
+                         className={`relative aspect-square rounded-xl overflow-hidden border transition-all group bg-slate-800 cursor-move
+                           ${dragOverIdx === imgIdx ? 'border-blue-500 scale-105 z-10 shadow-xl shadow-blue-500/20' : 'border-white/10'}
+                           ${draggedIdx === imgIdx ? 'opacity-40 grayscale' : 'opacity-100'}`}
+                       >
+                         <img src={url} className="w-full h-full object-cover pointer-events-none" referrerPolicy="no-referrer" />
+                         <div className="absolute inset-0 bg-slate-950/80 flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                           <button 
+                             onClick={(e) => {
+                               e.stopPropagation();
+                               const currentGallery = item.gallery || (item.image_url ? [item.image_url] : []);
+                               const newGallery = currentGallery.filter((_: any, i: number) => i !== imgIdx);
+                               updateItem(item.id, 'gallery', newGallery);
+                               if (imgIdx === 0) updateItem(item.id, 'image_url', newGallery[0] || '');
+                             }}
+                             className="p-1 bg-red-500/20 text-red-500 rounded-lg hover:bg-red-500 hover:text-white transition-all shadow-lg"
+                           >
+                             <Trash2 size={12} />
+                           </button>
+                           
+                           <div className="flex flex-col gap-1">
+                             {imgIdx > 0 && (
+                               <button 
+                                 onClick={(e) => { e.stopPropagation(); moveItemInArray(item.id, 'gallery', imgIdx, imgIdx - 1); }}
+                                 className="p-0.5 bg-white/10 text-white rounded hover:bg-blue-600 transition-colors"
+                               >
+                                 <ChevronLeft size={10} />
+                               </button>
+                             )}
+                             {imgIdx < (item.gallery || [item.image_url]).length - 1 && (
+                               <button 
+                                 onClick={(e) => { e.stopPropagation(); moveItemInArray(item.id, 'gallery', imgIdx, imgIdx + 1); }}
+                                 className="p-0.5 bg-white/10 text-white rounded hover:bg-blue-600 transition-colors"
+                               >
+                                 <ChevronRight size={10} />
+                               </button>
+                             )}
+                           </div>
+
+                           {imgIdx > 0 && (
+                             <button 
+                               onClick={(e) => {
+                                 e.stopPropagation();
+                                 const gallery = [...(item.gallery || [item.image_url])];
+                                 [gallery[imgIdx], gallery[0]] = [gallery[0], gallery[imgIdx]];
+                                 updateItem(item.id, 'gallery', gallery);
+                                 updateItem(item.id, 'image_url', gallery[0]);
+                               }}
+                               className="p-1 bg-blue-500/20 text-blue-500 rounded-lg hover:bg-blue-500 hover:text-white transition-all shadow-lg"
+                               title="Set as Cover"
+                             >
+                               <Plus size={12} className="rotate-45" />
+                             </button>
+                           )}
+                         </div>
+                         {imgIdx === 0 && (
+                           <div className="absolute bottom-0 left-0 right-0 bg-blue-600 py-0.5 text-center text-[7px] font-black uppercase tracking-widest text-white">Cover</div>
+                         )}
+                       </div>
+                     ))}
+                     <label className="aspect-square rounded-xl border-2 border-dashed border-white/10 flex flex-col items-center justify-center cursor-pointer hover:border-blue-500/50 hover:bg-blue-500/5 transition-all group">
+                       {uploadingStates[`${item.id}_gallery_achievements`] ? (
+                         <div className="flex flex-col items-center">
+                           <Upload size={14} className="text-blue-500 animate-bounce" />
+                         </div>
+                       ) : (
+                         <>
+                           <Plus size={16} className="text-slate-500" />
+                           <span className="text-[7px] font-black uppercase text-slate-600 mt-1">Add</span>
+                         </>
+                       )}
+                       <input
+                         type="file"
+                         className="hidden"
+                         accept="image/*"
+                         onChange={async (e) => {
+                           const file = e.target.files?.[0];
+                           if (file) {
+                             setUploadingStates(prev => ({ ...prev, [`${item.id}_gallery_achievements`]: true }));
+                             const url = await uploadAsset(file);
+                             if (url) {
+                               const currentGallery = item.gallery || (item.image_url ? [item.image_url] : []);
+                               const newGallery = [...currentGallery, url];
+                               updateItem(item.id, 'gallery', newGallery);
+                               if (!item.image_url) updateItem(item.id, 'image_url', url);
+                             }
+                             setUploadingStates(prev => ({ ...prev, [`${item.id}_gallery_achievements`]: false }));
+                           }
+                         }}
+                       />
+                     </label>
+                  </div>
+                </div>
+
+                {item.comments && item.comments.length > 0 && (
+                  <div className="space-y-2 mt-4 pt-4 border-t border-white/5">
+                    <label className="block text-sm font-bold text-amber-400 uppercase tracking-wide flex items-center gap-2">
+                       Comments ({item.comments.length})
+                    </label>
+                    <div className="space-y-2 max-h-40 overflow-y-auto pr-2 custom-scrollbar">
+                      {item.comments.map((c: any) => (
+                        <div key={c.id} className="bg-slate-900/50 p-2 rounded-lg border border-white/5 flex justify-between gap-2">
+                          <div>
+                            <p className="text-xs font-bold text-white">{c.name}</p>
+                            <p className="text-[10px] text-slate-400">{c.text}</p>
+                          </div>
+                          <button 
+                            onClick={() => {
+                              const newComments = item.comments.filter((com: any) => com.id !== c.id);
+                              updateItem(item.id, 'comments', newComments);
+                            }}
+                            className="text-red-400 hover:text-red-300"
+                          >
+                            <Trash2 size={12} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
             {activeTab === 'blogs' && editingItemId === item.id && (
               <div className="grid grid-cols-1 gap-4">
                 <div className="flex gap-4">
-                  <input type="date" value={item.published_at ? item.published_at.split('T')[0] : ''} onChange={e => updateItem(item.id, 'published_at', new Date(e.target.value).toISOString())} className="bg-slate-900/50 border border-white/10 rounded-lg px-3 py-2 text-white text-sm flex-1" />
-                  <label className="group flex-1 cursor-pointer bg-slate-800 hover:bg-slate-700 p-2 rounded-lg border border-white/10 transition-colors flex items-center justify-center gap-2">
-                    {uploadingStates[`${item.id}_image_url`] ? <span className="text-sm text-blue-400 animate-pulse">Uploading...</span> : (
-                      <>
-                        {item.image_url ? <img src={item.image_url} alt="Cover" className="w-6 h-6 rounded object-cover border border-blue-500/50" /> : <Upload size={16} className="text-blue-400" />}
-                        <span className="text-sm font-medium text-white group-hover:text-blue-400">{item.image_url ? 'Change Cover' : 'Upload Cover Image'}</span>
-                      </>
-                    )}
-                    <input type="file" accept="image/*" disabled={uploadingStates[`${item.id}_image_url`]} onChange={(e) => handleListUpload(e, item.id, 'image_url')} className="hidden" />
-                  </label>
+                  <div className="flex-1">
+                     <label className="block text-[10px] uppercase font-black text-slate-500 mb-1 ml-1">Title</label>
+                     <input type="text" value={item.title || ''} onChange={e => updateItem(item.id, 'title', e.target.value)} placeholder="Blog Title" className="w-full bg-slate-900/50 border border-white/10 rounded-lg px-3 py-2 text-white text-sm" />
+                  </div>
+                  <div className="w-48">
+                     <label className="block text-[10px] uppercase font-black text-slate-500 mb-1 ml-1">Publish Date</label>
+                     <input type="date" value={item.published_at ? item.published_at.split('T')[0] : ''} onChange={e => updateItem(item.id, 'published_at', new Date(e.target.value).toISOString())} className="w-full bg-slate-900/50 border border-white/10 rounded-lg px-3 py-2 text-white text-sm" />
+                  </div>
                 </div>
                 <JoditEditor value={item.content || ''} config={editorConfig} onBlur={newContent => updateItem(item.id, 'content', newContent)} />
+                
+                <div className="space-y-2 mt-4 pt-4 border-t border-white/5">
+                  <label className="block text-sm font-bold text-blue-400 uppercase tracking-wide">Blog Images</label>
+                  <MultiImageHandler 
+                    id={item.id}
+                    images={item.gallery || (item.image_url ? [item.image_url] : [])} 
+                    onImagesChange={(newImages) => {
+                      updateItem(item.id, 'gallery', newImages);
+                      if (newImages.length > 0) {
+                        updateItem(item.id, 'image_url', newImages[0]);
+                      }
+                    }} 
+                  />
+                </div>
+
+                {item.comments && item.comments.length > 0 && (
+                  <div className="space-y-2 mt-4 pt-4 border-t border-white/5">
+                    <label className="block text-sm font-bold text-amber-400 uppercase tracking-wide flex items-center gap-2">
+                       Comments ({item.comments.length})
+                    </label>
+                    <div className="space-y-2 max-h-40 overflow-y-auto pr-2 custom-scrollbar">
+                      {item.comments.map((c: any) => (
+                        <div key={c.id} className="bg-slate-900/50 p-2 rounded-lg border border-white/5 flex justify-between gap-2">
+                          <div>
+                            <p className="text-xs font-bold text-white">{c.name}</p>
+                            <p className="text-[10px] text-slate-400">{c.text}</p>
+                          </div>
+                          <button 
+                            onClick={() => {
+                              const newComments = item.comments.filter((com: any) => com.id !== c.id);
+                              updateItem(item.id, 'comments', newComments);
+                            }}
+                            className="text-red-400 hover:text-red-300"
+                          >
+                            <Trash2 size={12} />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
             {activeTab === 'experiences' && editingItemId === item.id && (
               <div className="grid grid-cols-1 gap-4">
-                <div className="flex gap-4">
-                  <input type="text" value={item.role || ''} onChange={e => updateItem(item.id, 'role', e.target.value)} placeholder="Role (e.g. Lead Developer)" className="bg-slate-900/50 border border-white/10 rounded-lg px-3 py-2 text-white text-sm flex-1" />
-                  <input type="text" value={item.company_institution || ''} onChange={e => updateItem(item.id, 'company_institution', e.target.value)} placeholder="Company / Institution" className="bg-slate-900/50 border border-white/10 rounded-lg px-3 py-2 text-white text-sm flex-1" />
+                <div className="flex flex-col sm:flex-row gap-4">
+                  <input 
+                    type="text" 
+                    value={item.role || ''} 
+                    onChange={e => updateItem(item.id, 'role', e.target.value)} 
+                    placeholder={item.type === 'education' ? "Degree / Certificate (e.g. B.Sc in CSE)" : "Role (e.g. Lead Developer)"} 
+                    className="bg-slate-900/50 border border-white/10 rounded-lg px-3 py-2 text-white text-sm flex-1" 
+                  />
+                  <input 
+                    type="text" 
+                    value={item.company_institution || ''} 
+                    onChange={e => updateItem(item.id, 'company_institution', e.target.value)} 
+                    placeholder={item.type === 'education' ? "Institution / School" : "Company / Organization"} 
+                    className="bg-slate-900/50 border border-white/10 rounded-lg px-3 py-2 text-white text-sm flex-1" 
+                  />
+                  {item.type === 'education' && (
+                    <input 
+                      type="text" 
+                      value={item.subject || ''} 
+                      onChange={e => updateItem(item.id, 'subject', e.target.value)} 
+                      placeholder="Subject / Group (e.g. Science)" 
+                      className="bg-slate-900/50 border border-white/10 rounded-lg px-3 py-2 text-white text-sm flex-1" 
+                    />
+                  )}
                 </div>
                 <div className="flex flex-col md:flex-row gap-4">
                   <div className="flex-1 flex gap-2">
@@ -859,8 +1310,24 @@ export default function AdminDashboard({ session }: { session: any }) {
                   <div className="flex-[2] grid grid-cols-1 sm:grid-cols-2 gap-4">
                     {/* Start Date */}
                     <div className="flex flex-col gap-1">
-                      <label className="text-[10px] text-slate-500 font-black uppercase ml-1">Start Date (Date, Month, Year)</label>
-                      <div className="flex gap-1">
+                      <label className="text-[10px] text-slate-500 font-black uppercase ml-1">Start Date (Used for Sorting)</label>
+                      <input 
+                        type="date" 
+                        value={item.start_date ? item.start_date.split('T')[0] : ''} 
+                        onChange={e => {
+                          const dateObj = new Date(e.target.value);
+                          updateItem(item.id, 'start_date', dateObj.toISOString());
+                          
+                          // Also try to update date_range text if preferred
+                          const day = dateObj.getDate();
+                          const month = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][dateObj.getMonth()];
+                          const year = dateObj.getFullYear();
+                          const end = item.date_range?.split(' to ')[1] || 'Present';
+                          updateItem(item.id, 'date_range', `${day} ${month} ${year} to ${end}`);
+                        }}
+                        className="bg-slate-900/50 border border-white/10 rounded-lg px-3 py-1.5 text-white text-[10px]"
+                      />
+                      <div className="flex gap-1 mt-1">
                         <select 
                           value={item.date_range?.split(' to ')[0]?.split(' ')[0] || '1'} 
                           onChange={e => {
@@ -979,18 +1446,62 @@ export default function AdminDashboard({ session }: { session: any }) {
                   
                   <div className="flex flex-col gap-1 w-14">
                     <label className="text-[10px] text-slate-500 font-black uppercase ml-1">Logo</label>
-                    <label className="group h-10 cursor-pointer bg-slate-800 hover:bg-slate-700 rounded-lg border border-white/10 transition-colors flex items-center justify-center relative">
-                      {uploadingStates[`${item.id}_image_url`] ? <span className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></span> : (
-                        <>
-                          {item.image_url ? (
-                            <img src={item.image_url} alt="Logo" className="w-full h-full object-contain rounded-lg p-1 bg-white" title="Change Logo" />
-                          ) : (
-                            <Upload size={16} className="text-blue-500 group-hover:scale-110 transition-transform" />
+                    <div 
+                      onDragOver={(e) => {
+                        e.preventDefault();
+                        setIsDraggingLogo(item.id);
+                      }}
+                      onDragLeave={() => setIsDraggingLogo(null)}
+                      onDrop={async (e) => {
+                        e.preventDefault();
+                        setIsDraggingLogo(null);
+                        const file = e.dataTransfer.files?.[0];
+                        if (file && file.type.startsWith('image/')) {
+                          const uploadKey = `${item.id}_image_url`;
+                          setUploadingStates(prev => ({ ...prev, [uploadKey]: true }));
+                          try {
+                            const url = await uploadAsset(file);
+                            if (url) {
+                              updateItem(item.id, 'image_url', url);
+                              showNotification('Logo uploaded via Drop!');
+                            }
+                          } finally {
+                            setUploadingStates(prev => ({ ...prev, [uploadKey]: false }));
+                          }
+                        }
+                      }}
+                      className={`group h-10 cursor-pointer rounded-lg border border-dashed transition-all flex items-center justify-center relative overflow-hidden
+                        ${isDraggingLogo === item.id ? 'bg-blue-500/20 border-blue-500' : 'bg-slate-800 border-white/10 hover:border-blue-500/50 hover:bg-slate-700'}`}
+                    >
+                      {uploadingStates[`${item.id}_image_url`] ? (
+                        <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                      ) : (
+                        <div className="w-full h-full relative">
+                          <label className="w-full h-full flex items-center justify-center cursor-pointer">
+                            {item.image_url ? (
+                              <img src={item.image_url} alt="Logo" className="w-full h-full object-contain rounded-lg p-1 bg-white" title="Change Logo" />
+                            ) : (
+                              <Upload size={16} className={`text-blue-500 group-hover:scale-110 transition-transform ${isDraggingLogo === item.id ? 'scale-125' : ''}`} />
+                            )}
+                            <input type="file" accept="image/*" disabled={uploadingStates[`${item.id}_image_url`]} onChange={(e) => handleListUpload(e, item.id, 'image_url')} className="hidden" />
+                          </label>
+                          {item.image_url && (
+                            <button 
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                updateItem(item.id, 'image_url', '');
+                                showNotification('Logo removed');
+                              }}
+                              className="absolute -top-1 -right-1 p-0.5 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-lg z-10"
+                              title="Remove Logo"
+                            >
+                              <X size={10} />
+                            </button>
                           )}
-                        </>
+                        </div>
                       )}
-                      <input type="file" accept="image/*" disabled={uploadingStates[`${item.id}_image_url`]} onChange={(e) => handleListUpload(e, item.id, 'image_url')} className="hidden" />
-                    </label>
+                    </div>
                   </div>
                 </div>
                 <JoditEditor value={item.description || ''} config={editorConfig} onBlur={newContent => updateItem(item.id, 'description', newContent)} />

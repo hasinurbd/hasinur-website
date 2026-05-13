@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { getMockData, mockPortfolioItems } from '../../lib/mockData';
 import { supabase, hasSupabaseConfig } from '../../lib/supabaseClient';
-import { ExternalLink, CodeXml, Layout, Monitor, ChevronRight } from 'lucide-react';
+import { ExternalLink, CodeXml, Layout, Monitor, ChevronRight, Heart, MessageSquare } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { FloatingIcon, BackgroundBlobs } from './VisualElements';
 import { motion, AnimatePresence } from 'motion/react';
+import { Link } from 'react-router-dom';
 
 type Category = 'all' | 'graphics' | 'video' | 'web' | 'projects';
 
@@ -66,57 +67,70 @@ export default function Projects() {
           className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8"
         >
           {filtered.map((item, idx) => (
-            <motion.a 
-              key={item.id} 
+            <motion.div
+              key={item.id}
               layout
               initial={{ opacity: 0, scale: 0.9 }}
               whileInView={{ opacity: 1, scale: 1 }}
               viewport={{ once: true }}
               transition={{ delay: idx * 0.05 }}
-              href={item.link || '#'} 
-              target={item.link && item.link !== '#' ? "_blank" : "_self"} 
-              rel="noopener noreferrer" 
-              className="group relative overflow-hidden rounded-[2rem] bg-slate-900 aspect-[4/3] block border border-white/5 shadow-2xl transition-all duration-500 hover:border-blue-500/50 hover:shadow-blue-500/10"
             >
-              <div className="absolute inset-0 bg-slate-800 flex items-center justify-center">
-                {item.image_url ? (
-                  <img src={item.image_url} alt={item.title} loading="lazy" className="absolute inset-0 w-full h-full object-cover transition-all duration-700 group-hover:scale-110 group-hover:rotate-2" />
-                ) : (
-                  <div className="text-slate-600 flex flex-col items-center gap-2">
-                    <Monitor size={24} />
-                    <span className="font-bold text-[9px] uppercase tracking-widest">Case Study</span>
-                  </div>
-                )}
-              </div>
-
-              {/* Gradient Overlays */}
-              <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/20 to-transparent opacity-60 group-hover:opacity-80 transition-all duration-500"></div>
-              <div className="absolute inset-0 bg-blue-600/10 opacity-0 group-hover:opacity-100 transition-opacity duration-700"></div>
-              
-              {/* Content */}
-              <div className="absolute inset-x-0 bottom-0 p-6 translate-y-6 group-hover:translate-y-0 transition-transform duration-500 ease-out">
-                <div className="max-w-full">
-                  <div className="flex items-center gap-2 mb-2">
-                    <span className="h-1 w-3 bg-blue-500 rounded-full group-hover:w-6 transition-all duration-500"></span>
-                    <span className="uppercase text-[9px] font-black tracking-[0.2em] text-blue-400">{item.category}</span>
-                  </div>
-                  <h3 className="text-xl font-black text-white mb-4 line-clamp-1 group-hover:text-blue-400 transition-colors uppercase tracking-tighter">{item.title}</h3>
+              <Link 
+                to={`/project/${item.id}`} 
+                className="group relative overflow-hidden rounded-[2rem] bg-slate-900 aspect-[4/3] block border border-white/5 shadow-2xl transition-all duration-500 hover:border-blue-500/50 hover:shadow-blue-500/10"
+              >
+                <div className="absolute inset-0 bg-slate-800 flex items-center justify-center">
+                  {item.image_url ? (
+                    <img src={item.image_url} alt={item.title} loading="lazy" className="absolute inset-0 w-full h-full object-cover transition-all duration-700 group-hover:scale-110 group-hover:rotate-2" />
+                  ) : (
+                    <div className="text-slate-600 flex flex-col items-center gap-2">
+                      <Monitor size={24} />
+                      <span className="font-bold text-[9px] uppercase tracking-widest">Case Study</span>
+                    </div>
+                  )}
                 </div>
+
+                {/* Love & Comments Badges */}
+                <div className="absolute top-4 right-4 flex gap-2">
+                   <div className="bg-black/50 backdrop-blur-md px-2 py-1 rounded-full text-[8px] font-black uppercase text-slate-300 flex items-center gap-1 border border-white/10 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <Heart size={10} className="text-red-500" fill="currentColor" />
+                      {item.likes || 0}
+                   </div>
+                   <div className="bg-black/50 backdrop-blur-md px-2 py-1 rounded-full text-[8px] font-black uppercase text-slate-300 flex items-center gap-1 border border-white/10 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <MessageSquare size={10} className="text-blue-500" />
+                      {item.comments?.length || 0}
+                   </div>
+                </div>
+
+                {/* Gradient Overlays */}
+                <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/20 to-transparent opacity-60 group-hover:opacity-80 transition-all duration-500"></div>
+                <div className="absolute inset-0 bg-blue-600/10 opacity-0 group-hover:opacity-100 transition-opacity duration-700"></div>
                 
-                <div className="flex items-center justify-between opacity-0 group-hover:opacity-100 transition-all duration-500 translate-y-4 group-hover:translate-y-0 delay-100">
-                  <div className="flex items-center gap-2 text-[9px] font-black text-white/60 uppercase tracking-widest">
-                    <span>Explore Project</span>
-                    <ChevronRight size={10} className="text-blue-500" />
+                {/* Content */}
+                <div className="absolute inset-x-0 bottom-0 p-6 translate-y-6 group-hover:translate-y-0 transition-transform duration-500 ease-out">
+                  <div className="max-w-full">
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="h-1 w-3 bg-blue-500 rounded-full group-hover:w-6 transition-all duration-500"></span>
+                      <span className="uppercase text-[9px] font-black tracking-[0.2em] text-blue-400">{item.category}</span>
+                    </div>
+                    <h3 className="text-xl font-black text-white mb-4 line-clamp-1 group-hover:text-blue-400 transition-colors uppercase tracking-tighter">{item.title}</h3>
                   </div>
-                  <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center text-white shadow-xl transform rotate-12 group-hover:rotate-0 transition-transform duration-500">
-                    <ExternalLink size={16} />
+                  
+                  <div className="flex items-center justify-between opacity-0 group-hover:opacity-100 transition-all duration-500 translate-y-4 group-hover:translate-y-0 delay-100">
+                    <div className="flex items-center gap-2 text-[9px] font-black text-white/60 uppercase tracking-widest">
+                      <span>Explore Project</span>
+                      <ChevronRight size={10} className="text-blue-500" />
+                    </div>
+                    <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center text-white shadow-xl transform rotate-12 group-hover:rotate-0 transition-transform duration-500">
+                      <ExternalLink size={16} />
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              {/* Glass reflection decorative element */}
-              <div className="absolute -top-24 -left-24 w-48 h-48 bg-white/5 rounded-full blur-3xl transition-all duration-700 group-hover:translate-x-full group-hover:translate-y-full"></div>
-            </motion.a>
+                {/* Glass reflection decorative element */}
+                <div className="absolute -top-24 -left-24 w-48 h-48 bg-white/5 rounded-full blur-3xl transition-all duration-700 group-hover:translate-x-full group-hover:translate-y-full"></div>
+              </Link>
+            </motion.div>
           ))}
         </motion.div>
       </div>

@@ -30,8 +30,16 @@ export default function Home() {
       const sectionName = path.charAt(0).toUpperCase() + path.slice(1);
       const baseTitle = 'S M Hasinur Rahman'; // Fallback base title
       document.title = `${sectionName} | ${baseTitle}`;
+    } else {
+      // Restore home title if on root
+      const saved = localStorage.getItem('mock_profile');
+      if (saved) {
+        const profile = JSON.parse(saved);
+        if (profile.name) {
+          document.title = `${profile.name} | Portfolio - ${profile.title}`;
+        }
+      }
     }
-    // No else block needed as ProfileContext useEffect will set the home title
   }, [location.pathname]);
 
   useEffect(() => {

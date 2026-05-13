@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { getMockData, mockAchievements as defaultAchievements } from '../../lib/mockData';
 import { supabase, hasSupabaseConfig } from '../../lib/supabaseClient';
-import { ArrowRight, Award, FileText } from 'lucide-react';
+import { ArrowRight, Award, FileText, MessageSquare, Heart } from 'lucide-react';
 import { BackgroundBlobs, FloatingIcon } from './VisualElements';
+import { Link } from 'react-router-dom';
 
 export default function Achievements() {
   const [achievements, setAchievements] = useState(() => getMockData('mock_achievements', defaultAchievements));
@@ -44,14 +45,24 @@ export default function Achievements() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
           {achievements.map(ach => (
-            <div key={ach.id} className="bg-slate-800/40 border border-white/5 rounded-3xl overflow-hidden hover:bg-slate-800/80 hover:border-blue-500/30 transition-all group flex flex-col h-full shadow-lg">
+            <Link key={ach.id} to={`/achievement/${ach.id}`} className="bg-slate-800/40 border border-white/5 rounded-3xl overflow-hidden hover:bg-slate-800/80 hover:border-blue-500/30 transition-all group flex flex-col h-full shadow-lg">
               <div className="h-44 overflow-hidden relative bg-slate-800 flex items-center justify-center">
                 {ach.image_url ? (
-                  <img src={ach.image_url} alt={ach.title} loading="lazy" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
+                  <img src={ach.image_url} alt={ach.title} loading="lazy" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
                 ) : (
                   <span className="text-slate-600 font-medium text-xs">No Image</span>
                 )}
                 <div className="absolute inset-0 bg-blue-900/20 mix-blend-overlay group-hover:opacity-0 transition-opacity"></div>
+                <div className="absolute top-4 right-4 flex gap-2">
+                  <div className="bg-black/50 backdrop-blur-md px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-tighter opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1.5">
+                    <Heart size={10} className="text-red-500" fill="currentColor" />
+                    {ach.likes || 0}
+                  </div>
+                  <div className="bg-black/50 backdrop-blur-md px-3 py-1 rounded-full text-[8px] font-black uppercase tracking-tighter opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-1.5">
+                    <MessageSquare size={10} className="text-blue-400" />
+                    {ach.comments?.length || 0}
+                  </div>
+                </div>
               </div>
               
               <div className="p-5 flex flex-col flex-grow">
@@ -67,17 +78,11 @@ export default function Achievements() {
                 
                 <div className="text-slate-400 text-sm mb-6 line-clamp-2 leading-relaxed flex-grow max-w-none [&_ul]:list-disc [&_ul]:ml-5 [&_ol]:list-decimal [&_ol]:ml-5 [&_p]:mb-2" dangerouslySetInnerHTML={{ __html: ach.description }} />
                 
-                {ach.full_story_link && ach.full_story_link !== '#' && ach.full_story_link !== '' ? (
-                  <a href={ach.full_story_link} target="_blank" rel="noopener noreferrer" className="inline-flex items-center text-xs font-black text-white hover:text-blue-400 transition-colors tracking-widest mt-auto uppercase">
-                    VIEW CERTIFICATE <ArrowRight size={14} className="ml-2 transition-transform group-hover:translate-x-1" />
-                  </a>
-                ) : (
-                  <button onClick={(e) => e.preventDefault()} className="inline-flex items-center text-xs font-black text-slate-500 tracking-widest mt-auto uppercase">
-                    LOCKED
-                  </button>
-                )}
+                <div className="inline-flex items-center text-xs font-black text-blue-500 group-hover:text-blue-400 transition-colors tracking-widest mt-auto uppercase">
+                  READ FULL STORY <ArrowRight size={14} className="ml-2 transition-transform group-hover:translate-x-1" />
+                </div>
               </div>
-            </div>
+            </Link>
           ))}
         </div>
       </div>
