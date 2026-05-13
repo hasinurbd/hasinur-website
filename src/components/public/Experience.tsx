@@ -37,10 +37,26 @@ export default function Experience() {
   ];
 
   const filtered = experiences.filter(exp => (filter === 'all' || exp.type === filter) && exp.type !== 'creative').sort((a, b) => {
-    // Basic sorting by date (descending)
-    const dateA = a.date_range?.split(' to ')[0] || '';
-    const dateB = b.date_range?.split(' to ')[0] || '';
-    return dateB.localeCompare(dateA);
+    const getSortDate = (item: any) => {
+      if (item.date_range?.toLowerCase().includes('present')) {
+        // Use current date plus some buffer to ensure "Present" is at the very top
+        // and among "Present" items, they sort by start_date
+        const start = new Date(item.start_date || item.created_at || 0).getTime();
+        return new Date(8640000000000000).getTime() + start; // Extremely far future + start offset
+      }
+      const parts = item.date_range?.split(' to ');
+      if (parts && parts.length === 2) {
+        const end = new Date(parts[1]);
+        if (!isNaN(end.getTime())) return end.getTime();
+      }
+      return new Date(item.start_date || item.created_at || 0).getTime();
+    };
+
+    const dateA = getSortDate(a);
+    const dateB = getSortDate(b);
+    
+    if (dateB !== dateA) return dateB - dateA;
+    return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
   });
 
   const formatDateRange = (range: string, align: 'left' | 'right' = 'right') => {
@@ -218,7 +234,7 @@ export default function Experience() {
                         </div>
 
                         {exp.image_url && (
-                          <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center p-1.5 shadow-xl shrink-0 border border-white/10 group-hover:scale-110 transition-transform duration-500 z-10">
+                          <div className="w-10 h-10 rounded-xl flex items-center justify-center p-1.5 shadow-xl shrink-0 border border-white/10 group-hover:scale-110 transition-transform duration-500 z-10">
                             <img src={exp.image_url} alt={`${exp.company_institution} logo`} loading="lazy" className="w-full h-full object-contain" />
                           </div>
                         )}

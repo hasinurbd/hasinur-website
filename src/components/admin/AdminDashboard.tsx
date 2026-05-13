@@ -21,7 +21,7 @@ export default function AdminDashboard({ session }: { session: any }) {
 
   const TABS_CONFIG: Record<string, { table: string, label: string, orderBy: string }> = useMemo(() => ({
     experiences: { table: 'experiences', label: 'Experience', orderBy: 'start_date' },
-    portfolio: { table: 'portfolio_items', label: 'Portfolio', orderBy: 'created_at' },
+    portfolio: { table: 'portfolio_items', label: 'Portfolio', orderBy: 'start_date' },
     achievements: { table: 'achievements', label: 'Achievements', orderBy: 'date' },
     blogs: { table: 'blogs', label: 'Blogs', orderBy: 'published_at' },
     reviews: { table: 'client_reviews', label: 'Reviews', orderBy: 'created_at' },
@@ -31,6 +31,7 @@ export default function AdminDashboard({ session }: { session: any }) {
   const [profileData, setProfileData] = useState(profile);
   const [listData, setListData] = useState<any[]>([]);
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
+  const [realtimeActivity, setRealtimeActivity] = useState<any[]>([]);
 
   useEffect(() => {
     setProfileData(profile);
@@ -81,9 +82,26 @@ export default function AdminDashboard({ session }: { session: any }) {
         const rawData = getMockData(key, defaultDataMap[activeTab] || []);
         // Local sorting
         const sortedData = [...rawData].sort((a, b) => {
-          const dateA = a.date || a.published_at || a.start_date || a.created_at;
-          const dateB = b.date || b.published_at || b.start_date || b.created_at;
-          return new Date(dateB).getTime() - new Date(dateA).getTime();
+          const getSortValue = (item: any) => {
+            if (activeTab === 'experiences' && item.date_range?.toLowerCase().includes('present')) {
+              return new Date(8640000000000000).getTime() + new Date(item.start_date || item.created_at || 0).getTime();
+            }
+            if (activeTab === 'experiences') {
+               const parts = item.date_range?.split(' to ');
+               if (parts?.length === 2) {
+                 const end = new Date(parts[1]);
+                 if (!isNaN(end.getTime())) return end.getTime();
+               }
+            }
+            const d = item.date || item.published_at || item.start_date || item.created_at;
+            return new Date(d || 0).getTime();
+          };
+          
+          const valA = getSortValue(a);
+          const valB = getSortValue(b);
+          
+          if (valB !== valA) return valB - valA;
+          return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
         });
         setListData(sortedData);
       }
@@ -104,12 +122,40 @@ export default function AdminDashboard({ session }: { session: any }) {
         const fetchData = async () => {
           // Attempt sorting by configured field
           const { data, error } = await supabase.from(config.table).select('*').order(config.orderBy, { ascending: false });
+          
+          let finalData = data;
+          
           // If sorting fails (e.g. column missing), fallback to created_at
           if (error && error.message.includes('column')) {
             const { data: fallbackData } = await supabase.from(config.table).select('*').order('created_at', { ascending: false });
-            if (fallbackData) setListData(fallbackData);
-          } else if (data && (data.length > 0 || activeTab === 'messages')) {
-            setListData(data);
+            finalData = fallbackData;
+          }
+
+          if (finalData && (finalData.length > 0 || activeTab === 'messages')) {
+            // Apply refined client-side sorting for specific cases like "Present"
+            const sorted = [...finalData].sort((a, b) => {
+              const getSortValue = (item: any) => {
+                if (activeTab === 'experiences' && item.date_range?.toLowerCase().includes('present')) {
+                  return new Date(8640000000000000).getTime() + new Date(item.start_date || item.created_at || 0).getTime();
+                }
+                if (activeTab === 'experiences') {
+                   const parts = item.date_range?.split(' to ');
+                   if (parts?.length === 2) {
+                     const end = new Date(parts[1]);
+                     if (!isNaN(end.getTime())) return end.getTime();
+                   }
+                }
+                const d = item[config.orderBy] || item.created_at;
+                return new Date(d || 0).getTime();
+              };
+              
+              const valA = getSortValue(a);
+              const valB = getSortValue(b);
+              
+              if (valB !== valA) return valB - valA;
+              return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
+            });
+            setListData(sorted);
           } else {
             const key = `mock_${activeTab}`;
             const defaultDataMap: Record<string, any[]> = {
@@ -119,7 +165,19 @@ export default function AdminDashboard({ session }: { session: any }) {
               reviews: mockReviews,
               blogs: mockBlogs
             };
-            setListData(getMockData(key, defaultDataMap[activeTab] || []));
+            const rawMock = getMockData(key, defaultDataMap[activeTab] || []);
+            const sortedMock = [...rawMock].sort((a: any, b: any) => {
+              if (activeTab === 'experiences') {
+                const isOngoingA = a.date_range?.toLowerCase().includes('present');
+                const isOngoingB = b.date_range?.toLowerCase().includes('present');
+                if (isOngoingA && !isOngoingB) return -1;
+                if (!isOngoingA && isOngoingB) return 1;
+              }
+              const d1 = a[config.orderBy] || a.created_at;
+              const d2 = b[config.orderBy] || b.created_at;
+              return new Date(d2 || 0).getTime() - new Date(d1 || 0).getTime();
+            });
+            setListData(sortedMock);
           }
         };
         fetchData();
@@ -201,7 +259,31 @@ export default function AdminDashboard({ session }: { session: any }) {
           showNotification(`${activeTab} updated & synced!`);
           setEditingItemId(null);
           const { data } = await supabase.from(config.table).select('*').order(config.orderBy, { ascending: false });
-          if (data) setListData(data);
+          if (data) {
+            const sorted = [...data].sort((a, b) => {
+              const getSortValue = (item: any) => {
+                if (activeTab === 'experiences' && item.date_range?.toLowerCase().includes('present')) {
+                  return new Date(8640000000000000).getTime() + new Date(item.start_date || item.created_at || 0).getTime();
+                }
+                if (activeTab === 'experiences') {
+                   const parts = item.date_range?.split(' to ');
+                   if (parts?.length === 2) {
+                     const end = new Date(parts[1]);
+                     if (!isNaN(end.getTime())) return end.getTime();
+                   }
+                }
+                const d = item[config.orderBy] || item.created_at;
+                return new Date(d || 0).getTime();
+              };
+              
+              const valA = getSortValue(a);
+              const valB = getSortValue(b);
+              
+              if (valB !== valA) return valB - valA;
+              return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
+            });
+            setListData(sorted);
+          }
         }
       }
     } finally {
@@ -209,15 +291,15 @@ export default function AdminDashboard({ session }: { session: any }) {
     }
   };
 
-  const addItem = () => {
+    const addItem = () => {
     const defaultDataMap: Record<string, any> = {
-      experiences: { company_institution: '', role: '', type: 'professional', bullet_points: [], start_date: new Date().toISOString(), subject: '' },
-      portfolio: { title: '', category: 'graphics', likes: 0, comments: [] },
-      reviews: { name: '', service_taken: '', rating: 5, country_flag: '', text: '' },
-      blogs: { title: '', published_at: new Date().toISOString(), likes: 0, comments: [] },
-      achievements: { title: '', date: new Date().toISOString(), likes: 0, comments: [] }
+      experiences: { company_institution: '', role: '', type: 'professional', bullet_points: [], start_date: new Date().toISOString(), subject: '', created_at: new Date().toISOString() },
+      portfolio: { title: '', category: 'graphics', likes: 0, comments: [], start_date: new Date().toISOString(), created_at: new Date().toISOString() },
+      reviews: { name: '', service_taken: '', rating: 5, country_flag: '', text: '', created_at: new Date().toISOString() },
+      blogs: { title: '', published_at: new Date().toISOString(), likes: 0, comments: [], created_at: new Date().toISOString() },
+      achievements: { title: '', date: new Date().toISOString(), likes: 0, comments: [], created_at: new Date().toISOString() }
     };
-    const newItem = { id: Date.now().toString(), ...(defaultDataMap[activeTab] || { title: '', likes: 0, comments: [] }) };
+    const newItem = { id: Date.now().toString(), ...(defaultDataMap[activeTab] || { title: '', likes: 0, comments: [], created_at: new Date().toISOString() }) };
     setListData([newItem, ...listData]);
     setEditingItemId(newItem.id);
   };
@@ -516,7 +598,63 @@ export default function AdminDashboard({ session }: { session: any }) {
       }
     };
     fetchStats();
-  }, []);
+
+    // Fetch and Set Real-time Activity
+    const fetchRecentActivity = async () => {
+      if (!hasSupabaseConfig) {
+        setRealtimeActivity([
+          { id: '1', type: 'Experience', text: 'New Experience: Lead Developer at HQ', time: 'Just now', icon: <Briefcase size={12} className="text-blue-400" />, created_at: new Date().toISOString() },
+          { id: '2', type: 'Project', text: 'New Portfolio: Minimalist Branding', time: '5m ago', icon: <FileImage size={12} className="text-emerald-400" />, created_at: new Date(Date.now() - 300000).toISOString() },
+          { id: '3', type: 'Blog', text: 'New Blog: Future of Social Media', time: '1h ago', icon: <FileText size={12} className="text-pink-400" />, created_at: new Date(Date.now() - 3600000).toISOString() }
+        ]);
+        return;
+      }
+
+      try {
+        const [p, e, b, m, r, a] = await Promise.all([
+          supabase.from('portfolio_items').select('id, title, created_at, start_date').order('created_at', { ascending: false }).limit(3),
+          supabase.from('experiences').select('id, company_institution, role, created_at, start_date').order('created_at', { ascending: false }).limit(3),
+          supabase.from('blogs').select('id, title, created_at, published_at').order('created_at', { ascending: false }).limit(3),
+          supabase.from('messages').select('id, name, created_at').order('created_at', { ascending: false }).limit(5),
+          supabase.from('client_reviews').select('id, name, created_at').order('created_at', { ascending: false }).limit(3),
+          supabase.from('achievements').select('id, title, created_at, date').order('created_at', { ascending: false }).limit(3),
+        ]);
+
+        const combined: any[] = [];
+        const formatItem = (item: any, type: string, displayTitle: string, icon: any) => ({
+          id: item.id,
+          type,
+          text: `${type}: ${displayTitle}`,
+          created_at: item.created_at || item.published_at || item.date || item.start_date,
+          icon
+        });
+
+        if (p.data) p.data.forEach(i => combined.push(formatItem(i, 'Project', i.title, <FileImage size={12} className="text-indigo-400" />)));
+        if (e.data) e.data.forEach(i => combined.push(formatItem(i, 'Experience', `${i.role} at ${i.company_institution}`, <Briefcase size={12} className="text-blue-400" />)));
+        if (b.data) b.data.forEach(i => combined.push(formatItem(i, 'Blog', i.title, <FileText size={12} className="text-pink-400" />)));
+        if (m.data) m.data.forEach(i => combined.push(formatItem(i, 'Message', `From ${i.name}`, <Mail size={12} className="text-emerald-400" />)));
+        if (r.data) r.data.forEach(i => combined.push(formatItem(i, 'Review', `By ${i.name}`, <Award size={12} className="text-amber-400" />)));
+        if (a.data) a.data.forEach(i => combined.push(formatItem(i, 'Achievement', i.title, <Award size={12} className="text-purple-400" />)));
+
+        setRealtimeActivity(combined.sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()).slice(0, 10));
+      } catch (err) {
+        console.error('Error fetching recent activity:', err);
+      }
+    };
+
+    fetchRecentActivity();
+
+    // Real-time Subscriptions
+    if (hasSupabaseConfig && activeTab === 'dashboard') {
+      const channels = ['portfolio_items', 'experiences', 'blogs', 'messages', 'client_reviews', 'achievements'].map(table => 
+        supabase.channel(`public:${table}`).on('postgres_changes', { event: '*', schema: 'public', table }, () => {
+          fetchRecentActivity();
+          fetchStats(); // Update stats too
+        }).subscribe()
+      );
+      return () => { channels.forEach(ch => supabase.removeChannel(ch)); };
+    }
+  }, [activeTab]);
 
   const renderDashboard = () => {
     const COLORS = ['#3b82f6', '#10b981', '#6366f1', '#f59e0b', '#ec4899', '#8b5cf6'];
@@ -532,12 +670,18 @@ export default function AdminDashboard({ session }: { session: any }) {
       { name: 'Reviews', value: stats.reviews },
     ];
 
-    const recentActivity = [
-      { id: 1, type: 'view', text: 'New visitor from London, UK', time: '2 mins ago', icon: <Eye size={12} className="text-blue-400" /> },
-      { id: 2, type: 'message', text: 'New message received', time: '1 hour ago', icon: <Mail size={12} className="text-emerald-400" /> },
-      { id: 3, type: 'update', text: 'Portfolio updated', time: '3 hours ago', icon: <Plus size={12} className="text-indigo-400" /> },
-      { id: 4, type: 'review', text: 'New client review', time: '5 hours ago', icon: <Award size={12} className="text-amber-400" /> },
-    ];
+    const getTimeAgo = (dateStr: string) => {
+      const date = new Date(dateStr);
+      const now = new Date();
+      const diffMs = now.getTime() - date.getTime();
+      const diffMins = Math.floor(diffMs / 60000);
+      if (diffMins < 1) return 'Just now';
+      if (diffMins < 60) return `${diffMins}m ago`;
+      const diffHours = Math.floor(diffMins / 60);
+      if (diffHours < 24) return `${diffHours}h ago`;
+      const diffDays = Math.floor(diffHours / 24);
+      return `${diffDays}d ago`;
+    };
 
     return (
       <div className="space-y-6">
@@ -611,7 +755,6 @@ export default function AdminDashboard({ session }: { session: any }) {
             </div>
           </motion.div>
 
-          {/* Recent Activity */}
           <motion.div 
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
@@ -620,14 +763,19 @@ export default function AdminDashboard({ session }: { session: any }) {
           >
             <h4 className="text-lg font-bold text-white tracking-tight mb-6">Recent Activity</h4>
             <div className="space-y-6 flex-1">
-              {recentActivity.map((activity) => (
+              {realtimeActivity.length === 0 ? (
+                <div className="flex flex-col items-center justify-center h-full text-slate-500 gap-2">
+                  <div className="w-8 h-8 rounded-full border-2 border-slate-700 border-t-blue-500 animate-spin"></div>
+                  <span className="text-xs uppercase font-black tracking-widest">Listening...</span>
+                </div>
+              ) : realtimeActivity.map((activity) => (
                 <div key={activity.id} className="relative pl-8 before:absolute before:left-[11px] before:top-8 before:bottom-[-24px] before:w-[2px] before:bg-white/5 last:before:hidden">
-                  <div className="absolute left-0 top-0 w-6 h-6 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center z-10">
+                  <div className="absolute left-0 top-0 w-6 h-6 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center z-10 hover:border-blue-500/50 transition-colors">
                     {activity.icon}
                   </div>
                   <div>
-                    <p className="text-sm text-slate-300 font-medium mb-1">{activity.text}</p>
-                    <span className="text-[10px] text-slate-500 uppercase tracking-widest font-bold">{activity.time}</span>
+                    <p className="text-sm text-slate-300 font-medium mb-1 line-clamp-1">{activity.text}</p>
+                    <span className="text-[10px] text-slate-500 uppercase tracking-widest font-bold">{getTimeAgo(activity.created_at)}</span>
                   </div>
                 </div>
               ))}
@@ -811,12 +959,16 @@ export default function AdminDashboard({ session }: { session: any }) {
             </div>
             {activeTab === 'portfolio' && editingItemId === item.id && (
               <div className="grid grid-cols-1 gap-6">
-                <div className="flex flex-col md:flex-row gap-4">
-                  <div className="flex-1">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
                     <label className="block text-[10px] uppercase font-black text-slate-500 mb-1 ml-1">Project Title</label>
                     <input type="text" value={item.title || ''} onChange={e => updateItem(item.id, 'title', e.target.value)} placeholder="e.g. Minimalist Branding" className="w-full bg-slate-900/50 border border-white/10 rounded-lg px-3 py-2 text-white text-sm" />
                   </div>
-                  <div className="flex-1">
+                  <div>
+                    <label className="block text-[10px] uppercase font-black text-slate-500 mb-1 ml-1">Project Date</label>
+                    <input type="date" value={item.start_date ? item.start_date.split('T')[0] : ''} onChange={e => updateItem(item.id, 'start_date', new Date(e.target.value).toISOString())} className="w-full bg-slate-900/50 border border-white/10 rounded-lg px-3 py-2 text-white text-sm" />
+                  </div>
+                  <div>
                     <label className="block text-[10px] uppercase font-black text-slate-500 mb-1 ml-1">Live Link / Source</label>
                     <input type="text" value={item.link || ''} onChange={e => updateItem(item.id, 'link', e.target.value)} placeholder="https://..." className="w-full bg-slate-900/50 border border-white/10 rounded-lg px-3 py-2 text-white text-sm" />
                   </div>
@@ -1007,44 +1159,69 @@ export default function AdminDashboard({ session }: { session: any }) {
                     <label className="block text-[10px] uppercase font-black text-slate-500 mb-1 ml-1">Date Achieved</label>
                     <input type="date" value={item.date ? item.date.split('T')[0] : ''} onChange={e => updateItem(item.id, 'date', new Date(e.target.value).toISOString())} className="w-full bg-slate-900/50 border border-white/10 rounded-lg px-3 py-2 text-white text-sm" />
                   </div>
-                  <div className="group flex-1 bg-slate-800 hover:bg-slate-700 p-2 rounded-lg border border-white/10 transition-colors flex items-center justify-center gap-2 relative">
-                    {uploadingStates[`${item.id}_image_url`] ? (
-                      <span className="text-sm text-blue-400 animate-pulse">Uploading...</span>
-                    ) : (
-                      <>
-                        <label className="flex items-center gap-2 cursor-pointer w-full justify-center">
-                          {item.image_url ? (
-                            <img src={item.image_url} alt="Cover" className="w-6 h-6 rounded object-cover border border-blue-500/50" />
-                          ) : (
-                            <Upload size={16} className="text-blue-400" />
-                          )}
-                          <span className="text-sm font-medium text-white group-hover:text-blue-400">
-                            {item.image_url ? 'Change Image' : 'Upload Image File'}
-                          </span>
-                          <input 
-                            type="file" 
-                            accept="image/*" 
-                            disabled={uploadingStates[`${item.id}_image_url`]} 
-                            onChange={(e) => handleListUpload(e, item.id, 'image_url')} 
-                            className="hidden" 
-                          />
-                        </label>
-                        {item.image_url && (
-                          <button 
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              updateItem(item.id, 'image_url', '');
-                            }}
-                            className="absolute top-1 right-1 p-0.5 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
-                            title="Remove Image"
-                          >
-                            <X size={10} />
-                          </button>
+                      <div 
+                        onDragOver={(e) => {
+                          e.preventDefault();
+                          setIsDraggingLogo(item.id + '_ach_main');
+                        }}
+                        onDragLeave={() => setIsDraggingLogo(null)}
+                        onDrop={async (e) => {
+                          e.preventDefault();
+                          setIsDraggingLogo(null);
+                          const file = e.dataTransfer.files?.[0];
+                          if (file && file.type.startsWith('image/')) {
+                            const uploadKey = `${item.id}_image_url`;
+                            setUploadingStates(prev => ({ ...prev, [uploadKey]: true }));
+                            try {
+                              const url = await uploadAsset(file);
+                              if (url) {
+                                updateItem(item.id, 'image_url', url);
+                                showNotification('Image uploaded via Drop!');
+                              }
+                            } finally {
+                              setUploadingStates(prev => ({ ...prev, [uploadKey]: false }));
+                            }
+                          }
+                        }}
+                        className={`group flex-1 ${isDraggingLogo === item.id + '_ach_main' ? 'bg-blue-600/20 border-blue-600 ring-2 ring-blue-500' : 'bg-slate-800 hover:bg-slate-700 border-white/10'} p-2 rounded-lg border transition-all flex items-center justify-center gap-2 relative min-h-[40px]`}
+                      >
+                        {uploadingStates[`${item.id}_image_url`] ? (
+                          <span className="text-sm text-blue-400 animate-pulse">Uploading...</span>
+                        ) : (
+                          <>
+                            <label className="flex items-center gap-2 cursor-pointer w-full justify-center">
+                              {item.image_url ? (
+                                <img src={item.image_url} alt="Cover" className="w-8 h-8 rounded object-contain" />
+                              ) : (
+                                <Upload size={16} className="text-blue-400" />
+                              )}
+                              <span className="text-sm font-medium text-white group-hover:text-blue-400">
+                                {item.image_url ? 'Change Image (or Drop Here)' : 'Upload Image (or Drop Here)'}
+                              </span>
+                              <input 
+                                type="file" 
+                                accept="image/*" 
+                                disabled={uploadingStates[`${item.id}_image_url`]} 
+                                onChange={(e) => handleListUpload(e, item.id, 'image_url')} 
+                                className="hidden" 
+                              />
+                            </label>
+                            {item.image_url && (
+                              <button 
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  updateItem(item.id, 'image_url', '');
+                                }}
+                                className="absolute top-1 right-1 p-0.5 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity shadow-lg"
+                                title="Remove Image"
+                              >
+                                <X size={10} />
+                              </button>
+                            )}
+                          </>
                         )}
-                      </>
-                    )}
-                  </div>
+                      </div>
                 </div>
                 <JoditEditor value={item.description || ''} config={editorConfig} onBlur={newContent => updateItem(item.id, 'description', newContent)} />
                 
@@ -1310,24 +1487,8 @@ export default function AdminDashboard({ session }: { session: any }) {
                   <div className="flex-[2] grid grid-cols-1 sm:grid-cols-2 gap-4">
                     {/* Start Date */}
                     <div className="flex flex-col gap-1">
-                      <label className="text-[10px] text-slate-500 font-black uppercase ml-1">Start Date (Used for Sorting)</label>
-                      <input 
-                        type="date" 
-                        value={item.start_date ? item.start_date.split('T')[0] : ''} 
-                        onChange={e => {
-                          const dateObj = new Date(e.target.value);
-                          updateItem(item.id, 'start_date', dateObj.toISOString());
-                          
-                          // Also try to update date_range text if preferred
-                          const day = dateObj.getDate();
-                          const month = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][dateObj.getMonth()];
-                          const year = dateObj.getFullYear();
-                          const end = item.date_range?.split(' to ')[1] || 'Present';
-                          updateItem(item.id, 'date_range', `${day} ${month} ${year} to ${end}`);
-                        }}
-                        className="bg-slate-900/50 border border-white/10 rounded-lg px-3 py-1.5 text-white text-[10px]"
-                      />
-                      <div className="flex gap-1 mt-1">
+                      <label className="text-[10px] text-slate-500 font-black uppercase ml-1">Start Date</label>
+                      <div className="flex gap-1">
                         <select 
                           value={item.date_range?.split(' to ')[0]?.split(' ')[0] || '1'} 
                           onChange={e => {
@@ -1336,7 +1497,13 @@ export default function AdminDashboard({ session }: { session: any }) {
                             const month = startParts.length === 3 ? startParts[1] : (startParts[0] || 'Jan');
                             const year = startParts.length === 3 ? startParts[2] : (startParts[1] || '2024');
                             const end = item.date_range?.split(' to ')[1] || 'Present';
-                            updateItem(item.id, 'date_range', `${day} ${month} ${year} to ${end}`);
+                            const newRange = `${day} ${month} ${year} to ${end}`;
+                            updateItem(item.id, 'date_range', newRange);
+                            
+                            // Update internal start_date for sorting
+                            const monthIdx = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'].indexOf(month);
+                            const d = new Date(parseInt(year), monthIdx, parseInt(day));
+                            updateItem(item.id, 'start_date', d.toISOString());
                           }}
                           className="bg-slate-900/50 border border-white/10 rounded-lg py-1.5 text-white text-[10px] w-12 text-center"
                         >
@@ -1350,7 +1517,13 @@ export default function AdminDashboard({ session }: { session: any }) {
                             const month = e.target.value;
                             const year = startParts.length === 3 ? startParts[2] : (startParts[1] || '2024');
                             const end = item.date_range?.split(' to ')[1] || 'Present';
-                            updateItem(item.id, 'date_range', `${day} ${month} ${year} to ${end}`);
+                            const newRange = `${day} ${month} ${year} to ${end}`;
+                            updateItem(item.id, 'date_range', newRange);
+
+                            // Update internal start_date for sorting
+                            const monthIdx = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'].indexOf(month);
+                            const d = new Date(parseInt(year), monthIdx, parseInt(day));
+                            updateItem(item.id, 'start_date', d.toISOString());
                           }}
                           className="bg-slate-900/50 border border-white/10 rounded-lg py-1.5 text-white text-[10px] flex-1 text-center"
                         >
@@ -1366,7 +1539,13 @@ export default function AdminDashboard({ session }: { session: any }) {
                             const month = startParts.length === 3 ? startParts[1] : (startParts[0] || 'Jan');
                             const year = e.target.value;
                             const end = item.date_range?.split(' to ')[1] || 'Present';
-                            updateItem(item.id, 'date_range', `${day} ${month} ${year} to ${end}`);
+                            const newRange = `${day} ${month} ${year} to ${end}`;
+                            updateItem(item.id, 'date_range', newRange);
+
+                            // Update internal start_date for sorting
+                            const monthIdx = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'].indexOf(month);
+                            const d = new Date(parseInt(year) || new Date().getFullYear(), monthIdx, parseInt(day));
+                            updateItem(item.id, 'start_date', d.toISOString());
                           }}
                           className="bg-slate-900/50 border border-white/10 rounded-lg px-2 py-1.5 text-white text-[10px] w-16 text-center"
                         />
@@ -1471,7 +1650,7 @@ export default function AdminDashboard({ session }: { session: any }) {
                         }
                       }}
                       className={`group h-10 cursor-pointer rounded-lg border border-dashed transition-all flex items-center justify-center relative overflow-hidden
-                        ${isDraggingLogo === item.id ? 'bg-blue-500/20 border-blue-500' : 'bg-slate-800 border-white/10 hover:border-blue-500/50 hover:bg-slate-700'}`}
+                        ${isDraggingLogo === item.id ? 'bg-blue-600/20 border-blue-600 ring-2 ring-blue-500/50' : 'bg-transparent border-white/10 hover:border-blue-500/50 hover:bg-white/5'}`}
                     >
                       {uploadingStates[`${item.id}_image_url`] ? (
                         <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
@@ -1479,7 +1658,7 @@ export default function AdminDashboard({ session }: { session: any }) {
                         <div className="w-full h-full relative">
                           <label className="w-full h-full flex items-center justify-center cursor-pointer">
                             {item.image_url ? (
-                              <img src={item.image_url} alt="Logo" className="w-full h-full object-contain rounded-lg p-1 bg-white" title="Change Logo" />
+                              <img src={item.image_url} alt="Logo" className="w-full h-full object-contain rounded-lg p-1" title="Change Logo (or Drop Here)" />
                             ) : (
                               <Upload size={16} className={`text-blue-500 group-hover:scale-110 transition-transform ${isDraggingLogo === item.id ? 'scale-125' : ''}`} />
                             )}
@@ -1557,7 +1736,7 @@ export default function AdminDashboard({ session }: { session: any }) {
                   <label className="group flex-1 cursor-pointer bg-slate-800 hover:bg-slate-700 p-2 rounded-lg border border-white/10 transition-colors flex items-center justify-center gap-2">
                     {uploadingStates[`${item.id}_avatar_url`] ? <span className="text-sm text-blue-400 animate-pulse">Uploading...</span> : (
                       <>
-                        {item.avatar_url ? <img src={item.avatar_url} alt="Avatar" className="w-6 h-6 rounded object-cover border border-blue-500/50 bg-white" /> : <Upload size={16} className="text-blue-400" />}
+                        {item.avatar_url ? <img src={item.avatar_url} alt="Avatar" className="w-6 h-6 rounded object-cover border border-blue-500/50" /> : <Upload size={16} className="text-blue-400" />}
                         <span className="text-sm font-medium text-white group-hover:text-blue-400">{item.avatar_url ? 'Change Avatar' : 'Upload Avatar'}</span>
                       </>
                     )}

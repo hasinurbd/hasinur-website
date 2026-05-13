@@ -6,20 +6,29 @@ import { BackgroundBlobs, FloatingIcon } from './VisualElements';
 import { Link } from 'react-router-dom';
 
 export default function Achievements() {
-  const [achievements, setAchievements] = useState(() => getMockData('mock_achievements', defaultAchievements));
+  const [achievements, setAchievements] = useState<any[]>([]);
 
   useEffect(() => {
-    if (hasSupabaseConfig) {
-      const fetchAch = async () => {
-        const { data, error } = await supabase.from('achievements').select('*').order('date', { ascending: false });
-        if (data && !error && data.length > 0) {
-          setAchievements(data);
-        } else {
-          setAchievements(getMockData('mock_achievements', defaultAchievements));
-        }
-      };
-      fetchAch();
-    }
+    const fetchAch = async () => {
+      let data: any[] | null = null;
+      if (hasSupabaseConfig) {
+        const { data: dbData } = await supabase.from('achievements').select('*').order('date', { ascending: false });
+        data = dbData;
+      }
+      
+      if (!data || data.length === 0) {
+        data = getMockData('mock_achievements', defaultAchievements);
+      }
+      
+      // Ensure sorted by date (latest first)
+      const sorted = [...(data || [])].sort((a, b) => {
+        const dateA = new Date(a.date || a.created_at || 0).getTime();
+        const dateB = new Date(b.date || b.created_at || 0).getTime();
+        return dateB - dateA;
+      });
+      setAchievements(sorted);
+    };
+    fetchAch();
   }, []);
 
   const formatDate = (dateString: string) => {

@@ -10,21 +10,36 @@ import { Link } from 'react-router-dom';
 type Category = 'all' | 'graphics' | 'video' | 'web' | 'projects';
 
 export default function Projects() {
-  const [items, setItems] = useState(() => getMockData('mock_portfolio', mockPortfolioItems));
+  const [items, setItems] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState<string>('all');
 
   useEffect(() => {
-    if (hasSupabaseConfig) {
-      const fetchItems = async () => {
-        const { data, error } = await supabase.from('portfolio_items').select('*');
-        if (data && !error && data.length > 0) {
-          setItems(data);
+    const fetchItems = async () => {
+      let data: any[] | null = null;
+      if (hasSupabaseConfig) {
+        const { data: dbData } = await supabase.from('portfolio_items').select('*').order('start_date', { ascending: false });
+        // Handle potential column missing error if recently added
+        if (dbData) {
+          data = dbData;
         } else {
-          setItems(getMockData('mock_portfolio', mockPortfolioItems));
+          const { data: fallback } = await supabase.from('portfolio_items').select('*').order('created_at', { ascending: false });
+          data = fallback;
         }
-      };
-      fetchItems();
-    }
+      }
+      
+      if (!data || data.length === 0) {
+        data = getMockData('mock_portfolio', mockPortfolioItems);
+      }
+      
+      // Ensure sorted by start_date (latest first)
+      const sorted = [...(data || [])].sort((a, b) => {
+        const dateA = new Date(a.start_date || a.created_at || 0).getTime();
+        const dateB = new Date(b.start_date || b.created_at || 0).getTime();
+        return dateB - dateA;
+      });
+      setItems(sorted);
+    };
+    fetchItems();
   }, []);
 
   const categories = ['all', ...Array.from(new Set(items.map(item => (item.category as string)?.trim() || ''))).filter(c => c !== '')];

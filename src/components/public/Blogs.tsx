@@ -6,20 +6,29 @@ import { FloatingIcon, BackgroundBlobs } from './VisualElements';
 import { Link } from 'react-router-dom';
 
 export default function Blogs() {
-  const [blogs, setBlogs] = useState<any[]>(() => getMockData('mock_blogs', defaultMockBlogs));
+  const [blogs, setBlogs] = useState<any[]>([]);
 
   useEffect(() => {
-    if (hasSupabaseConfig) {
-      const fetchBlogs = async () => {
-        const { data, error } = await supabase.from('blogs').select('*').order('published_at', { ascending: false });
-        if (data && !error && data.length > 0) {
-          setBlogs(data);
-        } else {
-          setBlogs(getMockData('mock_blogs', defaultMockBlogs));
-        }
-      };
-      fetchBlogs();
-    }
+    const fetchBlogs = async () => {
+      let data: any[] | null = null;
+      if (hasSupabaseConfig) {
+        const { data: dbData } = await supabase.from('blogs').select('*').order('published_at', { ascending: false });
+        data = dbData;
+      }
+      
+      if (!data || data.length === 0) {
+        data = getMockData('mock_blogs', defaultMockBlogs);
+      }
+      
+      // Ensure sorted by published_at (latest first)
+      const sorted = [...(data || [])].sort((a, b) => {
+        const dateA = new Date(a.published_at || a.created_at || 0).getTime();
+        const dateB = new Date(b.published_at || b.created_at || 0).getTime();
+        return dateB - dateA;
+      });
+      setBlogs(sorted);
+    };
+    fetchBlogs();
   }, []);
 
   return (

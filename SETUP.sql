@@ -30,9 +30,11 @@ CREATE TABLE IF NOT EXISTS experiences (
   role TEXT,
   status TEXT,
   type TEXT,
+  subject TEXT,
   description TEXT,
   bullet_points TEXT[],
   date_range TEXT,
+  start_date TIMESTAMPTZ,
   image_url TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -44,7 +46,11 @@ CREATE TABLE IF NOT EXISTS portfolio_items (
   category TEXT,
   description TEXT,
   image_url TEXT,
+  gallery TEXT[],
   link TEXT,
+  start_date TIMESTAMPTZ,
+  likes BIGINT DEFAULT 0,
+  tags TEXT[],
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -55,8 +61,10 @@ CREATE TABLE IF NOT EXISTS achievements (
   date TIMESTAMPTZ,
   description TEXT,
   image_url TEXT,
+  gallery TEXT[],
   full_story_link TEXT,
   author TEXT,
+  likes BIGINT DEFAULT 0,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -66,6 +74,8 @@ CREATE TABLE IF NOT EXISTS blogs (
   title TEXT,
   content TEXT,
   image_url TEXT,
+  gallery TEXT[],
+  likes BIGINT DEFAULT 0,
   published_at TIMESTAMPTZ DEFAULT NOW()
 );
 
