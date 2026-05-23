@@ -164,7 +164,7 @@ export default function Contact() {
                 <SocialLink href={profile.linkedin_url || "https://linkedin.com/in/hasinurbd"} icon={<Linkedin />} label="LinkedIn" />
                 <SocialLink href={profile.behance_url || "https://behance.net/hasinurbd"} icon={<BehanceIcon />} label="Behance" />
                 <SocialLink href={profile.twitter_url || "https://twitter.com/hasinurbd"} icon={<Twitter />} label="Twitter" />
-                <SocialLink href={profile.youtube_url || "https://youtube.com/@hasinurbd"} icon={<Youtube />} label="YouTube" />
+                <SocialLink href={profile.youtube_url || "https://www.youtube.com/@talksofhasi"} icon={<Youtube />} label="YouTube" />
               </div>
             </div>
           </div>

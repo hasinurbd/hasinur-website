@@ -104,7 +104,7 @@ export default function Hero() {
             <SocialLink href={profile.linkedin_url || "https://linkedin.com/in/hasinurbd"} target="_blank" icon={<Linkedin />} label="LinkedIn" />
             <SocialLink href={profile.behance_url || "https://behance.net/hasinurbd"} target="_blank" icon={<BehanceIcon />} label="Behance" />
             <SocialLink href={profile.twitter_url || "https://twitter.com/hasinurbd"} target="_blank" icon={<Twitter />} label="Twitter" />
-            <SocialLink href={profile.youtube_url || "https://youtube.com/@hasinurbd"} target="_blank" icon={<Youtube />} label="YouTube" />
+            <SocialLink href={profile.youtube_url || "https://www.youtube.com/@talksofhasi"} target="_blank" icon={<Youtube />} label="YouTube" />
           </div>
         </div>
       </motion.div>

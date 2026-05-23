@@ -13,7 +13,7 @@ export const defaultMockProfile = {
   github_url: "https://github.com/hasinurbd",
   behance_url: "https://behance.net/hasinurbd",
   twitter_url: "https://twitter.com/hasinurbd",
-  youtube_url: "https://youtube.com/@hasinurbd",
+  youtube_url: "https://www.youtube.com/@talksofhasi",
 };
 
 export const getMockData = (key: string, defaultValue: any) => {
