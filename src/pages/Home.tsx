@@ -37,7 +37,7 @@ export default function Home() {
       if (saved) {
         const profile = JSON.parse(saved);
         if (profile.name) {
-          document.title = `${profile.name} | Portfolio - ${profile.title}`;
+          document.title = profile.name;
         }
       }
     }

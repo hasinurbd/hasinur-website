@@ -67,7 +67,7 @@ export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   useEffect(() => {
     if (profile.name) {
-      document.title = `${profile.name} | Portfolio - ${profile.title}`;
+      document.title = profile.name;
       
       // Update theme-color meta tag
       let metaThemeColor = document.querySelector('meta[name="theme-color"]');
