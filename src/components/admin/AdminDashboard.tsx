@@ -9,6 +9,17 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useProfile } from '../../lib/ProfileContext';
 import MultiImageHandler from './MultiImageHandler';
 
+const generateUUID = () => {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID();
+  }
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    const r = Math.random() * 16 | 0;
+    const v = c === 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+};
+
 export default function AdminDashboard({ session }: { session: any }) {
   const navigate = useNavigate();
   const location = useLocation();
@@ -248,9 +259,10 @@ export default function AdminDashboard({ session }: { session: any }) {
 
         const toUpsert = listData.map(item => {
           const { created_at, ...cleanedItem } = item;
-          // If ID is numeric (mock) or missing, delete it so Postgres triggers the DEFAULT gen_random_uuid()
+          // If ID is numeric (mock) or missing, generate a client-side UUID so PostgreSQL receives a non-null UUID 
+          // and upsert works seamlessly for all objects in the batch.
           if (!cleanedItem.id || !cleanedItem.id.toString().includes('-')) {
-            delete cleanedItem.id;
+            cleanedItem.id = generateUUID();
           }
           return cleanedItem;
         });
@@ -923,11 +935,22 @@ export default function AdminDashboard({ session }: { session: any }) {
                   <button 
                     type="button" 
                     onClick={async () => {
+                      let finalId = item.id;
+                      let cleanedItem: any = { ...item };
+                      if (!cleanedItem.id || !cleanedItem.id.toString().includes('-')) {
+                        finalId = generateUUID();
+                        cleanedItem.id = finalId;
+                      }
+
                       // Save this specific item
                       const key = `mock_${activeTab}`;
                       const currentLocalData = getMockData(key, []);
-                      const updatedLocalData = currentLocalData.map((d: any) => d.id === item.id ? item : d);
+                      const updatedLocalData = currentLocalData.map((d: any) => d.id === item.id ? { ...item, id: finalId } : d);
                       saveMockData(key, updatedLocalData);
+
+                      if (finalId !== item.id) {
+                        setListData(prev => prev.map(d => d.id === item.id ? { ...d, id: finalId } : d));
+                      }
 
                       if (hasSupabaseConfig) {
                         const table = activeTab === 'experiences' ? 'experiences' : 
@@ -935,11 +958,6 @@ export default function AdminDashboard({ session }: { session: any }) {
                                       activeTab === 'reviews' ? 'client_reviews' : 
                                       activeTab === 'blogs' ? 'blogs' : 
                                       activeTab === 'clients' ? 'clients' : 'achievements';
-                        
-                        let cleanedItem: any = { ...item };
-                        if (!cleanedItem.id || !cleanedItem.id.toString().includes('-')) {
-                          delete cleanedItem.id;
-                        }
 
                         setIsSavingList(true);
                         try {
@@ -1826,11 +1844,11 @@ export default function AdminDashboard({ session }: { session: any }) {
                       </div>
                     ) : item.image_url ? (
                       <div className="flex flex-col items-center gap-3 w-full">
-                        <div className="bg-slate-950/40 p-4 rounded-xl border border-white/5 flex items-center justify-center max-w-[150px] aspect-video">
+                        <div className="bg-slate-900 p-4 rounded-xl border border-white/10 flex items-center justify-center max-w-[150px] aspect-video relative" style={{ backgroundImage: 'radial-gradient(rgba(255,255,255,0.08) 1px, transparent 1px)', backgroundSize: '8px 8px' }}>
                           <img 
                             src={item.image_url} 
                             alt="Logo preview" 
-                            className="max-h-12 max-w-full object-contain filter grayscale invert brightness-200" 
+                            className="max-h-12 max-w-full object-contain pointer-events-none" 
                           />
                         </div>
                         <div className="flex gap-2">

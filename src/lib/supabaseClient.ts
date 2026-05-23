@@ -23,7 +23,8 @@ export const uploadAsset = async (file: File): Promise<string | null> => {
             canvas.height = img.height * scaleSize;
             const ctx = canvas.getContext('2d');
             ctx?.drawImage(img, 0, 0, canvas.width, canvas.height);
-            resolve(canvas.toDataURL('image/jpeg', 0.7));
+            const targetType = file.type === 'image/jpeg' ? 'image/jpeg' : 'image/png';
+            resolve(canvas.toDataURL(targetType, targetType === 'image/jpeg' ? 0.7 : undefined));
           };
           img.onerror = () => resolve(e.target?.result as string);
           img.src = e.target?.result as string;
@@ -60,7 +61,8 @@ export const uploadAsset = async (file: File): Promise<string | null> => {
             canvas.height = img.height * scaleSize;
             const ctx = canvas.getContext('2d');
             ctx?.drawImage(img, 0, 0, canvas.width, canvas.height);
-            resolve(canvas.toDataURL('image/jpeg', 0.8));
+            const targetType = file.type === 'image/jpeg' ? 'image/jpeg' : 'image/png';
+            resolve(canvas.toDataURL(targetType, targetType === 'image/jpeg' ? 0.8 : undefined));
           };
           img.src = e.target?.result as string;
         };
@@ -70,7 +72,8 @@ export const uploadAsset = async (file: File): Promise<string | null> => {
       // Convert data URL back to File
       const res = await fetch(compressedDataUrl);
       const blob = await res.blob();
-      fileToUpload = new File([blob], fileName, { type: 'image/jpeg' });
+      const targetType = file.type === 'image/jpeg' ? 'image/jpeg' : 'image/png';
+      fileToUpload = new File([blob], fileName, { type: targetType });
     } catch (e) {
       console.warn('Compression failed, using original file:', e);
     }

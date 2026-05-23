@@ -65,7 +65,7 @@ export default function Clients() {
                 title={logo.name}
                 loading="lazy"
                 referrerPolicy="no-referrer"
-                className="max-h-8 max-w-[110px] object-contain opacity-40 hover:opacity-100 transition-opacity duration-300 pointer-events-none" 
+                className="max-h-8 max-w-[110px] object-contain opacity-80 hover:opacity-100 transition-all duration-300 pointer-events-none" 
               />
             </div>
           ))}
