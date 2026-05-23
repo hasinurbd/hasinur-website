@@ -4,6 +4,7 @@ import { getMockData, mockBlogs as defaultMockBlogs } from '../../lib/mockData';
 import { Calendar, ArrowRight, FileText, MessageSquare, Heart } from 'lucide-react';
 import { FloatingIcon, BackgroundBlobs } from './VisualElements';
 import { Link } from 'react-router-dom';
+import { slugify } from '../../lib/utils';
 
 export default function Blogs() {
   const [blogs, setBlogs] = useState<any[]>([]);
@@ -48,7 +49,7 @@ export default function Blogs() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
           {blogs.map((blog) => (
-            <Link key={blog.id} to={`/blog/${blog.id}`} className="bg-slate-800/50 border border-white/10 rounded-2xl overflow-hidden hover:border-blue-500/50 transition-all group flex flex-col h-full shadow-lg">
+            <Link key={blog.id} to={`/blog/${blog.id}--${slugify(blog.title)}`} className="bg-slate-800/50 border border-white/10 rounded-2xl overflow-hidden hover:border-blue-500/50 transition-all group flex flex-col h-full shadow-lg">
               {blog.image_url && (
                 <div className="relative h-44 overflow-hidden">
                   <img 

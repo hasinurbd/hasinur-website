@@ -10,7 +10,7 @@ export const hasSupabaseConfig = true; // Use true since we have fallbacks now
 
 export const uploadAsset = async (file: File): Promise<string | null> => {
   if (!hasSupabaseConfig) {
-    if (file.type.startsWith('image/')) {
+    if (file.type.startsWith('image/') && (file.type === 'image/jpeg' || file.type === 'image/jpg' || file.type === 'image/png') && file.size > 1.5 * 1024 * 1024) {
       return new Promise((resolve, reject) => {
         const reader = new FileReader();
         reader.onload = (e) => {
@@ -46,8 +46,8 @@ export const uploadAsset = async (file: File): Promise<string | null> => {
   
   let fileToUpload = file;
   
-  // Compress image if it's an image
-  if (file.type.startsWith('image/')) {
+  // Compress image if it's an image and is JPEG or PNG, only if it's larger than 1.5MB
+  if (file.type.startsWith('image/') && (file.type === 'image/jpeg' || file.type === 'image/jpg' || file.type === 'image/png') && file.size > 1.5 * 1024 * 1024) {
     try {
       const compressedDataUrl = await new Promise<string>((resolve) => {
         const reader = new FileReader();

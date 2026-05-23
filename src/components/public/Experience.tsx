@@ -234,8 +234,8 @@ export default function Experience() {
                         </div>
 
                         {exp.image_url && (
-                          <div className="w-10 h-10 rounded-full flex items-center justify-center shadow-xl shrink-0 border border-white/10 group-hover:scale-110 transition-transform duration-500 z-10 overflow-hidden">
-                            <img src={exp.image_url} alt={`${exp.company_institution} logo`} loading="lazy" className="w-full h-full object-cover" />
+                          <div className="w-12 h-12 bg-transparent rounded-xl flex items-center justify-center shrink-0 border border-white/5 hover:border-white/15 group-hover:scale-110 transition-transform duration-500 z-10 overflow-hidden p-1.5">
+                            <img src={exp.image_url} alt={`${exp.company_institution} logo`} loading="lazy" className="max-h-full max-w-full object-contain pointer-events-none" />
                           </div>
                         )}
                       </div>

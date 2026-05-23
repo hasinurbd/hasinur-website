@@ -9,6 +9,7 @@ import Footer from '../components/public/Footer';
 
 export default function ProjectDetail() {
   const { id } = useParams();
+  const realId = id ? id.split('--')[0] : '';
   const navigate = useNavigate();
   const [project, setProject] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -27,7 +28,7 @@ export default function ProjectDetail() {
       setLoading(true);
       try {
         if (hasSupabaseConfig) {
-          const { data, error } = await supabase.from('portfolio_items').select('*').eq('id', id).single();
+          const { data, error } = await supabase.from('portfolio_items').select('*').eq('id', realId).single();
           if (data && !error) {
             setProject(data);
             setLikes(data.likes || 0);
@@ -35,7 +36,7 @@ export default function ProjectDetail() {
           }
         } else {
           const localData = getMockData('mock_portfolio', mockPortfolioItems);
-          const found = localData.find((a: any) => a.id === id);
+          const found = localData.find((a: any) => a.id === realId);
           if (found) {
             setProject(found);
             setLikes(found.likes || 0);
@@ -51,7 +52,7 @@ export default function ProjectDetail() {
 
     fetchProject();
     window.scrollTo(0, 0);
-  }, [id]);
+  }, [realId]);
 
   const handleLike = async () => {
     if (isLiked) return;
@@ -62,10 +63,10 @@ export default function ProjectDetail() {
 
     try {
       if (hasSupabaseConfig) {
-        await supabase.from('portfolio_items').update({ likes: newLikes }).eq('id', id);
+        await supabase.from('portfolio_items').update({ likes: newLikes }).eq('id', realId);
       } else {
         const localData = getMockData('mock_portfolio', mockPortfolioItems);
-        const updatedLocalData = localData.map((p: any) => p.id === id ? { ...p, likes: newLikes } : p);
+        const updatedLocalData = localData.map((p: any) => p.id === realId ? { ...p, likes: newLikes } : p);
         localStorage.setItem('mock_portfolio', JSON.stringify(updatedLocalData));
       }
     } catch (err) {
@@ -121,12 +122,12 @@ export default function ProjectDetail() {
         const { error } = await supabase
           .from('portfolio_items')
           .update({ comments: updatedComments })
-          .eq('id', id);
+          .eq('id', realId);
         
         if (error) throw error;
       } else {
         const localData = getMockData('mock_portfolio', mockPortfolioItems);
-        const updatedLocalData = localData.map((p: any) => p.id === id ? { ...p, comments: updatedComments } : p);
+        const updatedLocalData = localData.map((p: any) => p.id === realId ? { ...p, comments: updatedComments } : p);
         localStorage.setItem('mock_portfolio', JSON.stringify(updatedLocalData));
       }
       
@@ -167,7 +168,7 @@ export default function ProjectDetail() {
       
       <main className="pt-24 pb-20 px-4 md:px-6 max-w-6xl mx-auto">
         <div className="print:hidden">
-          <Link to="/" className="inline-flex items-center gap-2 text-slate-400 hover:text-blue-400 transition-colors mb-8 group">
+          <Link to="/portfolio" className="inline-flex items-center gap-2 text-slate-400 hover:text-blue-400 transition-colors mb-8 group">
             <ArrowLeft size={18} className="group-hover:-translate-x-1 transition-transform" />
             <span className="font-black uppercase tracking-widest text-xs">Explore Projects</span>
           </Link>

@@ -4,6 +4,7 @@ import { supabase, hasSupabaseConfig } from '../../lib/supabaseClient';
 import { ArrowRight, Award, FileText, MessageSquare, Heart } from 'lucide-react';
 import { BackgroundBlobs, FloatingIcon } from './VisualElements';
 import { Link } from 'react-router-dom';
+import { slugify } from '../../lib/utils';
 
 export default function Achievements() {
   const [achievements, setAchievements] = useState<any[]>([]);
@@ -54,7 +55,7 @@ export default function Achievements() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8">
           {achievements.map(ach => (
-            <Link key={ach.id} to={`/achievement/${ach.id}`} className="bg-slate-800/40 border border-white/5 rounded-3xl overflow-hidden hover:bg-slate-800/80 hover:border-blue-500/30 transition-all group flex flex-col h-full shadow-lg">
+            <Link key={ach.id} to={`/achievement/${ach.id}--${slugify(ach.title)}`} className="bg-slate-800/40 border border-white/5 rounded-3xl overflow-hidden hover:bg-slate-800/80 hover:border-blue-500/30 transition-all group flex flex-col h-full shadow-lg">
               <div className="h-44 overflow-hidden relative bg-slate-800 flex items-center justify-center">
                 {ach.image_url ? (
                   <img src={ach.image_url} alt={ach.title} loading="lazy" className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />

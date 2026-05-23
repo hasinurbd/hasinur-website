@@ -25,7 +25,7 @@ export default function FloatingChat() {
     { q: "Where are you located?", a: `I am located in ${profile.location}.` },
     { q: "What is your current role?", a: `I am currently the ${profile.title}.` },
     { q: "What are your recent projects?", a: "Some of my recent work includes Brand Identity Design, UI/UX Website designs, and Social Media Strategy." },
-    { q: "Can you provide a resume?", a: `Yes! You can download my resume using the 'Download CV' button on the homepage, or visit: ${profile.resume_url || '#'}` }
+    { q: "Can you provide a resume?", a: `Yes! You can download my resume using the 'Download CV' button on the homepage, or visit: ${!profile.resume_url || profile.resume_url === '#' ? '/resume' : profile.resume_url}` }
   ], [profile]);
 
   const handleSend = async (e?: React.FormEvent) => {

@@ -9,6 +9,7 @@ import Admin from "./pages/Admin";
 import AchievementDetail from "./pages/AchievementDetail";
 import BlogDetail from "./pages/BlogDetail";
 import ProjectDetail from "./pages/ProjectDetail";
+import Resume from "./pages/Resume";
 import { ProfileProvider } from "./lib/ProfileContext";
 
 export default function App() {
@@ -20,6 +21,7 @@ export default function App() {
           <Route path="/achievement/:id" element={<AchievementDetail />} />
           <Route path="/blog/:id" element={<BlogDetail />} />
           <Route path="/project/:id" element={<ProjectDetail />} />
+          <Route path="/resume" element={<Resume />} />
           <Route path="*" element={<Home />} />
         </Routes>
       </BrowserRouter>

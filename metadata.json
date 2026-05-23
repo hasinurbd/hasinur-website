@@ -2,5 +2,5 @@
   "name": "S M Hasinur Rahman",
   "description": "Professional engineering portfolio and CMS for S M Hasinur Rahman.",
   "requestFramePermissions": [],
-  "majorCapabilities": []
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }

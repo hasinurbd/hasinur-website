@@ -37,27 +37,27 @@ export default function Clients() {
   const duplicatedLogos = [...logos, ...logos, ...logos, ...logos, ...logos, ...logos, ...logos, ...logos];
 
   return (
-    <section id="clients" className="py-10 bg-slate-950/20 border-y border-white/[0.03] overflow-hidden relative z-10 w-full select-none">
-      <div className="max-w-7xl mx-auto px-4 mb-5 text-center">
-        <p className="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em] mb-1">
-          Trusted Collaborations & Clients
-        </p>
+    <section id="clients" className="py-12 bg-slate-950/10 border-y border-white/[0.02] overflow-hidden relative z-10 w-full select-none">
+      <div className="max-w-7xl mx-auto px-4 mb-8 text-center">
+        <span className="text-blue-500 font-bold tracking-[0.3em] uppercase text-[9px] mb-2 block">Collaborations</span>
+        <h2 className="text-2xl md:text-3xl font-black mb-3 tracking-tight text-white uppercase font-sans">Trusted Clients & Brands</h2>
+        <div className="w-10 h-0.5 bg-gradient-to-r from-blue-600 to-indigo-500 mx-auto rounded-full shadow-[0_0_10px_rgba(37,99,235,0.3)]"></div>
       </div>
 
-      <div className="relative w-full overflow-hidden flex items-center h-16">
+      <div className="relative w-full overflow-hidden flex items-center h-20">
         {/* Soft elegant shadow masks for left/right edges */}
         <div className="absolute left-0 top-0 w-24 h-full bg-gradient-to-r from-slate-950 to-transparent z-10 pointer-events-none"></div>
         <div className="absolute right-0 top-0 w-24 h-full bg-gradient-to-l from-slate-950 to-transparent z-10 pointer-events-none"></div>
 
         {/* Scrolling Ticker Line: GPU accelerated, zero CPU layout cost, pauses on hover! */}
         <div 
-          className="flex gap-16 items-center shrink-0 animate-marquee-right hover:[animation-play-state:paused] cursor-pointer will-change-transform"
+          className="flex gap-4 items-center shrink-0 animate-marquee-right hover:[animation-play-state:paused] cursor-pointer will-change-transform px-4"
           style={{ width: 'max-content' }}
         >
           {duplicatedLogos.map((logo, index) => (
             <div 
               key={`${logo.id}-${index}`} 
-              className="flex items-center justify-center h-10 w-28 px-2 shrink-0 transition-transform duration-300 hover:scale-110"
+              className="flex items-center justify-center h-16 w-32 px-3 shrink-0 bg-slate-900/30 hover:bg-slate-900/50 border border-white/[0.04] rounded-xl transition-all duration-300 hover:scale-105 hover:border-blue-500/20 shadow-sm shadow-black/10"
             >
               <img 
                 src={logo.image_url} 
@@ -65,7 +65,7 @@ export default function Clients() {
                 title={logo.name}
                 loading="lazy"
                 referrerPolicy="no-referrer"
-                className="max-h-8 max-w-[110px] object-contain opacity-80 hover:opacity-100 transition-all duration-300 pointer-events-none" 
+                className="max-h-10 max-w-full object-contain opacity-75 hover:opacity-100 transition-all duration-300 pointer-events-none" 
               />
             </div>
           ))}

@@ -9,6 +9,7 @@ import Footer from '../components/public/Footer';
 
 export default function AchievementDetail() {
   const { id } = useParams();
+  const realId = id ? id.split('--')[0] : '';
   const navigate = useNavigate();
   const [achievement, setAchievement] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -27,7 +28,7 @@ export default function AchievementDetail() {
       setLoading(true);
       try {
         if (hasSupabaseConfig) {
-          const { data, error } = await supabase.from('achievements').select('*').eq('id', id).single();
+          const { data, error } = await supabase.from('achievements').select('*').eq('id', realId).single();
           if (data && !error) {
             setAchievement(data);
             setLikes(data.likes || 0);
@@ -35,7 +36,7 @@ export default function AchievementDetail() {
           }
         } else {
           const localData = getMockData('mock_achievements', mockAchievements);
-          const found = localData.find((a: any) => a.id === id);
+          const found = localData.find((a: any) => a.id === realId);
           if (found) {
             setAchievement(found);
             setLikes(found.likes || 0);
@@ -51,7 +52,7 @@ export default function AchievementDetail() {
 
     fetchAchievement();
     window.scrollTo(0, 0);
-  }, [id]);
+  }, [realId]);
 
   const handleLike = async () => {
     if (isLiked) return;
@@ -60,10 +61,10 @@ export default function AchievementDetail() {
     setIsLiked(true);
     try {
       if (hasSupabaseConfig) {
-        await supabase.from('achievements').update({ likes: newLikes }).eq('id', id);
+        await supabase.from('achievements').update({ likes: newLikes }).eq('id', realId);
       } else {
         const localData = getMockData('mock_achievements', mockAchievements);
-        const updatedLocalData = localData.map((a: any) => a.id === id ? { ...a, likes: newLikes } : a);
+        const updatedLocalData = localData.map((a: any) => a.id === realId ? { ...a, likes: newLikes } : a);
         localStorage.setItem('mock_achievements', JSON.stringify(updatedLocalData));
       }
     } catch (err) { console.error(err); }
@@ -110,12 +111,12 @@ export default function AchievementDetail() {
         const { error } = await supabase
           .from('achievements')
           .update({ comments: updatedComments })
-          .eq('id', id);
+          .eq('id', realId);
         
         if (error) throw error;
       } else {
         const localData = getMockData('mock_achievements', mockAchievements);
-        const updatedLocalData = localData.map((a: any) => a.id === id ? { ...a, comments: updatedComments } : a);
+        const updatedLocalData = localData.map((a: any) => a.id === realId ? { ...a, comments: updatedComments } : a);
         localStorage.setItem('mock_achievements', JSON.stringify(updatedLocalData));
       }
       
@@ -153,9 +154,9 @@ export default function AchievementDetail() {
       <Navbar />
       
       <main className="pt-24 pb-20 px-4 md:px-6 max-w-5xl mx-auto">
-        <Link to="/" className="inline-flex items-center gap-2 text-slate-400 hover:text-blue-400 transition-colors mb-8 group">
+        <Link to="/achievements" className="inline-flex items-center gap-2 text-slate-400 hover:text-blue-400 transition-colors mb-8 group">
           <ArrowLeft size={18} className="group-hover:-translate-x-1 transition-transform" />
-          <span className="font-black uppercase tracking-widest text-xs">Back to Home</span>
+          <span className="font-black uppercase tracking-widest text-xs">Back to Achievements</span>
         </Link>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">

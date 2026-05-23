@@ -7,25 +7,13 @@ import { FloatingIcon, BackgroundBlobs } from './VisualElements';
 export default function Hero() {
   const { profile, avatarUrl } = useProfile();
 
-  const handleDownloadCV = async (e: React.MouseEvent) => {
-    if (!profile.resume_url || profile.resume_url === "#") return;
-    
-    try {
-      e.preventDefault();
-      const response = await fetch(profile.resume_url);
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.setAttribute('download', 'Resume_Hasinur.pdf');
-      document.body.appendChild(link);
-      link.click();
-      link.parentNode?.removeChild(link);
-      window.URL.revokeObjectURL(url);
-    } catch (error) {
-      console.error("Download failed:", error);
-      window.open(profile.resume_url, '_blank');
+  const handleDownloadCV = (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (!profile.resume_url || profile.resume_url === "#") {
+      window.open('/resume', '_blank');
+      return;
     }
+    window.open(profile.resume_url, '_blank');
   };
 
   return (

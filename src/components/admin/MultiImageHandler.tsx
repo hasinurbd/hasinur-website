@@ -48,6 +48,15 @@ export default function MultiImageHandler({ images = [], onImagesChange, id }: M
 
   return (
     <div className="space-y-4">
+      <div className="flex justify-between items-center bg-slate-900/60 px-4 py-2.5 rounded-xl border border-white/5">
+        <span className="text-xs text-slate-400 font-bold uppercase tracking-wider flex items-center gap-2">
+          <ImageIcon size={14} className="text-blue-400" /> Gallery Management
+        </span>
+        <span className="px-2 py-0.5 rounded-md bg-blue-500/20 text-blue-400 text-xs font-black">
+          {images.length} {images.length === 1 ? 'image' : 'images'}
+        </span>
+      </div>
+
       <div
         onDragOver={(e) => { e.preventDefault(); setIsDragOver(true); }}
         onDragLeave={() => setIsDragOver(false)}

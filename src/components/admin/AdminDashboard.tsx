@@ -1003,7 +1003,7 @@ export default function AdminDashboard({ session }: { session: any }) {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                    <div className="space-y-3">
-                    <label className="block text-[10px] uppercase font-black text-slate-500 ml-1">Visual Gallery (Multi-Upload)</label>
+                    <label className="block text-[10px] uppercase font-black text-slate-500 ml-1">Visual Gallery (Multi-Upload - {(item.gallery || (item.image_url ? [item.image_url] : [])).length} images)</label>
                     <div className="grid grid-cols-4 gap-2">
                        {(item.gallery || (item.image_url ? [item.image_url] : [])).map((url: string, imgIdx: number) => (
                          <div 
@@ -1255,7 +1255,7 @@ export default function AdminDashboard({ session }: { session: any }) {
                 <JoditEditor value={item.description || ''} config={editorConfig} onBlur={newContent => updateItem(item.id, 'description', newContent)} />
                 
                 <div className="space-y-3 mt-4 pt-4 border-t border-white/5">
-                  <label className="block text-sm font-bold text-blue-400 uppercase tracking-wide">Image Gallery (Multi-Photo - Drag to Reorder)</label>
+                  <label className="block text-sm font-bold text-blue-400 uppercase tracking-wide">Image Gallery ({(item.gallery || (item.image_url ? [item.image_url] : [])).length} Images - Drag to Reorder)</label>
                   <div className="grid grid-cols-5 gap-2">
                      {(item.gallery || (item.image_url ? [item.image_url] : [])).map((url: string, imgIdx: number) => (
                        <div 
@@ -1678,16 +1678,16 @@ export default function AdminDashboard({ session }: { session: any }) {
                           }
                         }
                       }}
-                      className={`group h-12 w-12 cursor-pointer rounded-full border border-dashed transition-all flex items-center justify-center relative overflow-hidden
-                        ${isDraggingLogo === item.id ? 'bg-blue-600/20 border-blue-600 ring-2 ring-blue-500/50' : 'bg-transparent border-white/10 hover:border-blue-500/50 hover:bg-white/5'}`}
+                      className={`group h-12 w-12 cursor-pointer rounded-xl border border-dashed transition-all flex items-center justify-center relative overflow-hidden
+                        ${isDraggingLogo === item.id ? 'bg-blue-600/20 border-blue-600 ring-2 ring-blue-500/50' : 'bg-slate-900/50 border-white/10 hover:border-blue-500/50 hover:bg-slate-900/80'}`}
                     >
                       {uploadingStates[`${item.id}_image_url`] ? (
                         <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
                       ) : (
-                        <div className="w-full h-full relative">
+                        <div className="w-full h-full relative p-1.5 flex items-center justify-center bg-slate-900/30">
                           <label className="w-full h-full flex items-center justify-center cursor-pointer">
                             {item.image_url ? (
-                              <img src={item.image_url} alt="Logo" className="absolute inset-0 w-full h-full object-cover" title="Change Logo (or Drop Here)" />
+                              <img src={item.image_url} alt="Logo" className="max-h-full max-w-full object-contain pointer-events-none" title="Change Logo (or Drop Here)" />
                             ) : (
                               <Upload size={16} className={`text-blue-500 group-hover:scale-110 transition-transform ${isDraggingLogo === item.id ? 'scale-125' : ''}`} />
                             )}

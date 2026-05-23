@@ -9,6 +9,7 @@ import Footer from '../components/public/Footer';
 
 export default function BlogDetail() {
   const { id } = useParams();
+  const realId = id ? id.split('--')[0] : '';
   const navigate = useNavigate();
   const [blog, setBlog] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -27,7 +28,7 @@ export default function BlogDetail() {
       setLoading(true);
       try {
         if (hasSupabaseConfig) {
-          const { data, error } = await supabase.from('blogs').select('*').eq('id', id).single();
+          const { data, error } = await supabase.from('blogs').select('*').eq('id', realId).single();
           if (data && !error) {
             setBlog(data);
             setLikes(data.likes || 0);
@@ -35,7 +36,7 @@ export default function BlogDetail() {
           }
         } else {
           const localData = getMockData('mock_blogs', mockBlogs);
-          const found = localData.find((b: any) => b.id === id);
+          const found = localData.find((b: any) => b.id === realId);
           if (found) {
             setBlog(found);
             setLikes(found.likes || 0);
@@ -51,7 +52,7 @@ export default function BlogDetail() {
 
     fetchBlog();
     window.scrollTo(0, 0);
-  }, [id]);
+  }, [realId]);
 
   const handleLike = async () => {
     if (isLiked) return;
@@ -60,10 +61,10 @@ export default function BlogDetail() {
     setIsLiked(true);
     try {
       if (hasSupabaseConfig) {
-        await supabase.from('blogs').update({ likes: newLikes }).eq('id', id);
+        await supabase.from('blogs').update({ likes: newLikes }).eq('id', realId);
       } else {
         const localData = getMockData('mock_blogs', mockBlogs);
-        const updatedLocalData = localData.map((b: any) => b.id === id ? { ...b, likes: newLikes } : b);
+        const updatedLocalData = localData.map((b: any) => b.id === realId ? { ...b, likes: newLikes } : b);
         localStorage.setItem('mock_blogs', JSON.stringify(updatedLocalData));
       }
     } catch (err) { console.error(err); }
@@ -110,12 +111,12 @@ export default function BlogDetail() {
         const { error } = await supabase
           .from('blogs')
           .update({ comments: updatedComments })
-          .eq('id', id);
+          .eq('id', realId);
         
         if (error) throw error;
       } else {
         const localData = getMockData('mock_blogs', mockBlogs);
-        const updatedLocalData = localData.map((b: any) => b.id === id ? { ...b, comments: updatedComments } : b);
+        const updatedLocalData = localData.map((b: any) => b.id === realId ? { ...b, comments: updatedComments } : b);
         localStorage.setItem('mock_blogs', JSON.stringify(updatedLocalData));
       }
       
@@ -153,7 +154,7 @@ export default function BlogDetail() {
       <Navbar />
       
       <main className="pt-24 pb-20 px-4 md:px-6 max-w-5xl mx-auto">
-        <Link to="/" className="inline-flex items-center gap-2 text-slate-400 hover:text-blue-400 transition-colors mb-8 group">
+        <Link to="/blogs" className="inline-flex items-center gap-2 text-slate-400 hover:text-blue-400 transition-colors mb-8 group">
           <ArrowLeft size={18} className="group-hover:-translate-x-1 transition-transform" />
           <span className="font-black uppercase tracking-widest text-xs">Back to Articles</span>
         </Link>

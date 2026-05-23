@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { getMockData, mockPortfolioItems } from '../../lib/mockData';
 import { supabase, hasSupabaseConfig } from '../../lib/supabaseClient';
 import { ExternalLink, CodeXml, Layout, Monitor, ChevronRight, Heart, MessageSquare } from 'lucide-react';
-import { cn } from '../../lib/utils';
+import { cn, slugify } from '../../lib/utils';
 import { FloatingIcon, BackgroundBlobs } from './VisualElements';
 import { motion, AnimatePresence } from 'motion/react';
 import { Link } from 'react-router-dom';
@@ -91,7 +91,7 @@ export default function Projects() {
               transition={{ delay: idx * 0.05 }}
             >
               <Link 
-                to={`/project/${item.id}`} 
+                to={`/project/${item.id}--${slugify(item.title)}`} 
                 className="group relative overflow-hidden rounded-[2rem] bg-slate-900 aspect-[4/3] block border border-white/5 shadow-2xl transition-all duration-500 hover:border-blue-500/50 hover:shadow-blue-500/10"
               >
                 <div className="absolute inset-0 bg-slate-800 flex items-center justify-center">
