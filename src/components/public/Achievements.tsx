@@ -17,8 +17,13 @@ export default function Achievements() {
         data = dbData;
       }
       
-      if (!data || data.length === 0) {
+      if (data === null) {
         data = getMockData('mock_achievements', defaultAchievements);
+      } else if (data.length === 0) {
+        const localSaved = localStorage.getItem('mock_achievements');
+        if (localSaved) {
+          data = JSON.parse(localSaved);
+        }
       }
       
       // Ensure sorted by date (latest first)

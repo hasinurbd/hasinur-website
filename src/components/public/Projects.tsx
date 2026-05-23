@@ -27,8 +27,13 @@ export default function Projects() {
         }
       }
       
-      if (!data || data.length === 0) {
+      if (data === null) {
         data = getMockData('mock_portfolio', mockPortfolioItems);
+      } else if (data.length === 0) {
+        const localSaved = localStorage.getItem('mock_portfolio');
+        if (localSaved) {
+          data = JSON.parse(localSaved);
+        }
       }
       
       // Ensure sorted by start_date (latest first)

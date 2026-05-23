@@ -324,14 +324,27 @@ export default function AdminDashboard({ session }: { session: any }) {
   };
 
   const deleteItem = async (id: string) => {
-    if (hasSupabaseConfig && typeof id === 'string' && id.includes('-') && TABS_CONFIG[activeTab]) {
-      try {
-        await supabase.from(TABS_CONFIG[activeTab].table).delete().match({ id });
-      } catch (e) {
-        // Silent recovery
+    const updatedList = listData.filter(item => item.id !== id);
+    setListData(updatedList);
+    
+    // Immediately persist list deletion to localStorage mock data
+    saveMockData(`mock_${activeTab}`, updatedList);
+    
+    if (hasSupabaseConfig && TABS_CONFIG[activeTab]) {
+      const isUUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
+      if (isUUID) {
+        try {
+          await supabase.from(TABS_CONFIG[activeTab].table).delete().eq('id', id);
+          showNotification('Item permanently deleted from database.');
+        } catch (e) {
+          // Silent recovery
+        }
+      } else {
+        showNotification('Item removed from local list.');
       }
+    } else {
+      showNotification('Item removed.');
     }
-    setListData(listData.filter(item => item.id !== id));
   };
 
   const [uploadingStates, setUploadingStates] = useState<Record<string, boolean>>({});
