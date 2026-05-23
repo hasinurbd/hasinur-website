@@ -25,20 +25,12 @@ export default function Home() {
   const location = useLocation();
 
   useEffect(() => {
-    // Only set sub-page titles here, base title is handled by ProfileContext
-    const path = location.pathname.substring(1);
-    if (path && !['home', '/'].includes(path)) {
-      const sectionName = path.charAt(0).toUpperCase() + path.slice(1);
-      const baseTitle = 'S M Hasinur Rahman'; // Fallback base title
-      document.title = `${sectionName} | ${baseTitle}`;
-    } else {
-      // Restore home title if on root
-      const saved = localStorage.getItem('mock_profile');
-      if (saved) {
-        const profile = JSON.parse(saved);
-        if (profile.name) {
-          document.title = profile.name;
-        }
+    // Update title based on root profile
+    const saved = localStorage.getItem('mock_profile');
+    if (saved) {
+      const profile = JSON.parse(saved);
+      if (profile.name) {
+        document.title = profile.name;
       }
     }
   }, [location.pathname]);

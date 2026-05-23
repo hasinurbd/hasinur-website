@@ -50,7 +50,7 @@ export default function AdminDashboard({ session }: { session: any }) {
   }, [profile]);
 
   useEffect(() => {
-    document.title = `${profileData?.name || 'Portfolio'} | Admin - ${activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}`;
+    document.title = `${profileData?.name || 'S M Hasinur Rahman'} | Admin - ${activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}`;
   }, [profileData.name, activeTab]);
 
   const editorConfig = useMemo(() => ({
