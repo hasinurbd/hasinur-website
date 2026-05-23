@@ -73,7 +73,7 @@ export default function Navbar() {
                 <img src={avatarUrl} alt="Profile" className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
               </div>
               <div className="flex flex-col">
-                <span className="text-xl md:text-2xl font-black tracking-tighter text-white group-hover:text-blue-400 transition-colors leading-none whitespace-nowrap">{profile?.name || "S M Hasinur Rahman"}</span>
+                <span className="text-xl md:text-2xl font-black tracking-tighter text-white group-hover:text-blue-400 transition-colors leading-none whitespace-nowrap uppercase">HASINUR</span>
               </div>
             </a>
           </div>
