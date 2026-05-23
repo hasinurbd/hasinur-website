@@ -8,6 +8,7 @@ import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianG
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useProfile } from '../../lib/ProfileContext';
 import MultiImageHandler from './MultiImageHandler';
+import { cleanFilenameToCaption } from '../../lib/utils';
 
 const generateUUID = () => {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
@@ -70,6 +71,7 @@ export default function AdminDashboard({ session }: { session: any }) {
   const [isSavingProfile, setIsSavingProfile] = useState(false);
   const [isSavingList, setIsSavingList] = useState(false);
   const [notification, setNotification] = useState<{message: string, type: 'success' | 'error'} | null>(null);
+  const [detectedMetadata, setDetectedMetadata] = useState<Record<string, { title: string, filename: string, tags: string[] }>>({});
 
   const showNotification = (message: string, type: 'success' | 'error' = 'success') => {
     setNotification({ message, type });
@@ -1113,6 +1115,35 @@ export default function AdminDashboard({ session }: { session: any }) {
                                  const newGallery = [...currentGallery, url];
                                  updateItem(item.id, 'gallery', newGallery);
                                  if (!item.image_url) updateItem(item.id, 'image_url', url);
+
+                                 // Auto-caption detection
+                                 const cleanCaption = cleanFilenameToCaption(file.name);
+                                 const currentTitle = item.title ? item.title.trim() : "";
+                                 const hasNoTitle = !currentTitle || currentTitle === "Untitled Project" || currentTitle === "New Portfolio Item" || currentTitle === "";
+                                 
+                                 if (hasNoTitle) {
+                                   updateItem(item.id, 'title', cleanCaption);
+                                   showNotification(`Auto-caption: Title set to "${cleanCaption}"`);
+                                 } else {
+                                   showNotification(`Extracted filename: "${cleanCaption}"`);
+                                 }
+
+                                 // Extract tags/skills suggestions
+                                 const stopWords = ['png', 'jpg', 'jpeg', 'svg', 'webp', 'gif', 'v1', 'v2', 'v3', 'draft', 'design', 'final', 'ver', 'version', 'logo', 'preview', 'artwork'];
+                                 const words = file.name.replace(/\.[^/.]+$/, "").split(/[-_+ ]+/);
+                                 const extractedTags = words
+                                   .map(w => w.trim().replace(/[^\w]/g, ""))
+                                   .filter(w => w.length > 2 && !stopWords.includes(w.toLowerCase()) && isNaN(Number(w)))
+                                   .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase());
+
+                                 setDetectedMetadata(prev => ({
+                                   ...prev,
+                                   [item.id]: {
+                                     title: cleanCaption,
+                                     filename: file.name,
+                                     tags: extractedTags
+                                   }
+                                 }));
                                }
                                setUploadingStates(prev => ({ ...prev, [`${item.id}_gallery`]: false }));
                              }
@@ -1158,6 +1189,102 @@ export default function AdminDashboard({ session }: { session: any }) {
                     </div>
                   </div>
                 </div>
+
+                 {/* Auto-Caption Assistant Block */}
+                 {detectedMetadata[item.id] && (
+                   <motion.div 
+                     initial={{ opacity: 0, scale: 0.98 }}
+                     animate={{ opacity: 1, scale: 1 }}
+                     className="bg-blue-500/5 border border-blue-500/15 rounded-2xl p-4 space-y-3 text-left mb-4"
+                   >
+                     <div className="flex items-center justify-between">
+                       <span className="text-xs font-black text-blue-400 uppercase tracking-widest flex items-center gap-1.5 animate-pulse">
+                         🪄 Auto-Caption Assistant Active
+                       </span>
+                       <button 
+                         onClick={(e) => {
+                           e.preventDefault();
+                           e.stopPropagation();
+                           setDetectedMetadata(prev => {
+                             const next = { ...prev };
+                             delete next[item.id];
+                             return next;
+                           });
+                         }}
+                         className="text-slate-400 hover:text-white transition-colors p-1 bg-transparent border-0 cursor-pointer"
+                       >
+                         <X size={14} />
+                       </button>
+                     </div>
+                     
+                     <div className="text-xs text-slate-300">
+                       <span className="text-slate-400 font-bold">Detected Filename:</span> <code className="font-mono text-blue-300 bg-blue-950/40 px-1.5 py-0.5 rounded text-[11px] font-normal">{detectedMetadata[item.id].filename}</code>
+                     </div>
+
+                     <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2 border-t border-white/5">
+                       <div className="bg-slate-900/40 p-3 rounded-xl border border-white/5 flex flex-col justify-between gap-2.5">
+                         <div>
+                           <div className="text-slate-400 uppercase tracking-wider font-extrabold text-[9px] mb-1">Suggested Title</div>
+                           <div className="text-sm font-bold text-amber-300 leading-tight">"{detectedMetadata[item.id].title}"</div>
+                         </div>
+                         <button
+                           onClick={(e) => {
+                             e.preventDefault();
+                             e.stopPropagation();
+                             updateItem(item.id, 'title', detectedMetadata[item.id].title);
+                             showNotification('Applied suggested title!');
+                           }}
+                           className="w-full text-center text-[10px] font-black uppercase text-blue-400 hover:text-white px-2 py-1.5 bg-blue-500/10 hover:bg-blue-600 rounded-lg transition-all cursor-pointer border border-blue-500/20"
+                         >
+                           Apply Title
+                         </button>
+                       </div>
+
+                       <div className="bg-slate-900/40 p-3 rounded-xl border border-white/5 flex flex-col justify-between gap-2.5">
+                         <div>
+                           <div className="text-slate-400 uppercase tracking-wider font-extrabold text-[9px] mb-1">Extracted Skills/Tags</div>
+                           <div className="text-xs text-slate-300 font-semibold leading-relaxed">
+                             {detectedMetadata[item.id].tags.length > 0 ? detectedMetadata[item.id].tags.join(', ') : 'None extracted'}
+                           </div>
+                         </div>
+                         <button
+                           disabled={detectedMetadata[item.id].tags.length === 0}
+                           onClick={(e) => {
+                             e.preventDefault();
+                             e.stopPropagation();
+                             const currentTags = item.tags || [];
+                             const merged = Array.from(new Set([...currentTags, ...detectedMetadata[item.id].tags]));
+                             updateItem(item.id, 'tags', merged);
+                             showNotification('Applied suggested skills & tools!');
+                           }}
+                           className="w-full text-center text-[10px] font-black uppercase text-blue-400 hover:text-white px-2 py-1.5 bg-blue-500/10 hover:bg-blue-600 rounded-lg transition-all cursor-pointer border border-blue-500/20 disabled:opacity-50"
+                         >
+                           Apply Skills
+                         </button>
+                       </div>
+
+                       <div className="bg-slate-900/40 p-3 rounded-xl border border-white/5 flex flex-col justify-between gap-2.5">
+                         <div>
+                           <div className="text-slate-400 uppercase tracking-wider font-extrabold text-[9px] mb-1">Placeholder Generator</div>
+                           <div className="text-[11px] text-slate-400 leading-tight">Generate a structured introductory paragraph using the detected caption.</div>
+                         </div>
+                         <button
+                           onClick={(e) => {
+                             e.preventDefault();
+                             e.stopPropagation();
+                             const desc = item.description || "";
+                             const textToAppend = `<p><strong>${detectedMetadata[item.id].title}</strong> is an illustrative project demonstrating quality branding designs, interface development assets, and custom strategic creation processes.</p>`;
+                             updateItem(item.id, 'description', desc + textToAppend);
+                             showNotification('Appended custom HTML intro draft to description!');
+                           }}
+                           className="w-full text-center text-[10px] font-black uppercase text-emerald-400 hover:text-white px-2 py-1.5 bg-emerald-500/10 hover:bg-emerald-600 rounded-lg transition-all cursor-pointer border border-emerald-500/20"
+                         >
+                           Generate Intro text
+                         </button>
+                       </div>
+                     </div>
+                   </motion.div>
+                 )}
 
                 <div>
                   <label className="block text-[10px] uppercase font-black text-slate-500 mb-1 ml-1">Deep Details / Content</label>
