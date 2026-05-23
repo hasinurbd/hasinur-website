@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { LogOut, Home, User, Briefcase, FileImage, Award, Save, Plus, Trash2, Mail, FileText, Upload, BarChart3, Users, Eye, MousePointerClick, Heart, MessageSquare, ArrowLeft, ArrowRight, ChevronLeft, ChevronRight, X } from 'lucide-react';
+import { LogOut, Home, User, Briefcase, FileImage, Award, Save, Plus, Trash2, Mail, FileText, Upload, BarChart3, Users, Eye, MousePointerClick, Heart, MessageSquare, ArrowLeft, ArrowRight, ChevronLeft, ChevronRight, X, Layers } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase, hasSupabaseConfig, uploadAsset } from '../../lib/supabaseClient';
-import { getMockProfile, saveMockProfile, getMockData, saveMockData, mockExperiences, mockPortfolioItems, mockAchievements, mockBlogs, defaultMockProfile, mockReviews } from '../../lib/mockData';
+import { getMockProfile, saveMockProfile, getMockData, saveMockData, mockExperiences, mockPortfolioItems, mockAchievements, mockBlogs, defaultMockProfile, mockReviews, mockClients } from '../../lib/mockData';
 import JoditEditor from 'jodit-react';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid, PieChart, Pie, Cell, BarChart, Bar } from 'recharts';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -16,7 +16,7 @@ export default function AdminDashboard({ session }: { session: any }) {
 
   const activeTab = useMemo(() => {
     const path = location.pathname.replace('/admin', '').replace('/', '');
-    return ['dashboard', 'profile', 'experiences', 'portfolio', 'achievements', 'blogs', 'reviews', 'messages'].includes(path) ? path : 'dashboard';
+    return ['dashboard', 'profile', 'experiences', 'portfolio', 'achievements', 'blogs', 'reviews', 'messages', 'clients'].includes(path) ? path : 'dashboard';
   }, [location.pathname]);
 
   const TABS_CONFIG: Record<string, { table: string, label: string, orderBy: string }> = useMemo(() => ({
@@ -25,7 +25,8 @@ export default function AdminDashboard({ session }: { session: any }) {
     achievements: { table: 'achievements', label: 'Achievements', orderBy: 'date' },
     blogs: { table: 'blogs', label: 'Blogs', orderBy: 'published_at' },
     reviews: { table: 'client_reviews', label: 'Reviews', orderBy: 'created_at' },
-    messages: { table: 'messages', label: 'Messages', orderBy: 'created_at' }
+    messages: { table: 'messages', label: 'Messages', orderBy: 'created_at' },
+    clients: { table: 'clients', label: 'Client Logos', orderBy: 'created_at' }
   }), []);
 
   const [profileData, setProfileData] = useState(profile);
@@ -77,7 +78,8 @@ export default function AdminDashboard({ session }: { session: any }) {
           portfolio: mockPortfolioItems,
           achievements: mockAchievements,
           reviews: mockReviews,
-          blogs: mockBlogs
+          blogs: mockBlogs,
+          clients: mockClients
         };
         const rawData = getMockData(key, defaultDataMap[activeTab] || []);
         // Local sorting
@@ -163,7 +165,8 @@ export default function AdminDashboard({ session }: { session: any }) {
               portfolio: mockPortfolioItems,
               achievements: mockAchievements,
               reviews: mockReviews,
-              blogs: mockBlogs
+              blogs: mockBlogs,
+              clients: mockClients
             };
             const rawMock = getMockData(key, defaultDataMap[activeTab] || []);
             const sortedMock = [...rawMock].sort((a: any, b: any) => {
@@ -298,7 +301,8 @@ export default function AdminDashboard({ session }: { session: any }) {
       portfolio: { title: '', category: 'graphics', likes: 0, comments: [], start_date: new Date().toISOString(), created_at: new Date().toISOString() },
       reviews: { name: '', service_taken: '', rating: 5, country_flag: '', text: '', created_at: new Date().toISOString() },
       blogs: { title: '', published_at: new Date().toISOString(), likes: 0, comments: [], created_at: new Date().toISOString() },
-      achievements: { title: '', date: new Date().toISOString(), likes: 0, comments: [], created_at: new Date().toISOString() }
+      achievements: { title: '', date: new Date().toISOString(), likes: 0, comments: [], created_at: new Date().toISOString() },
+      clients: { name: '', image_url: '', created_at: new Date().toISOString() }
     };
     const newItem = { id: Date.now().toString(), ...(defaultDataMap[activeTab] || { title: '', likes: 0, comments: [], created_at: new Date().toISOString() }) };
     setListData([newItem, ...listData]);
@@ -869,6 +873,7 @@ export default function AdminDashboard({ session }: { session: any }) {
         <h3 className="text-lg font-semibold text-slate-300">
           {activeTab === 'blogs' ? 'Published Blogs' : 
            activeTab === 'reviews' ? 'Client Feedback' : 
+           activeTab === 'clients' ? 'Client Brand Logos' : 
            activeTab === 'portfolio' ? 'Showcase Items' : 
            activeTab === 'achievements' ? 'Milestone List' : 'Experience History'}
         </h3>
@@ -888,6 +893,8 @@ export default function AdminDashboard({ session }: { session: any }) {
                 </div>
               ) : activeTab === 'reviews' ? (
                 <div className="flex-1 text-white font-bold px-3 py-2 bg-slate-900/50 rounded-lg border border-white/5 line-clamp-1">{item.name || 'Client Review'}</div>
+              ) : activeTab === 'clients' ? (
+                <div className="flex-1 text-white font-bold px-3 py-2 bg-slate-900/50 rounded-lg border border-white/5 line-clamp-1">{item.name || 'Client Logo Entry'}</div>
               ) : editingItemId === item.id ? (
                 <div className="flex-1 bg-slate-900/10 rounded-lg border border-white/5 px-2 py-1 flex items-center">
                    <span className="text-slate-500 text-[10px] font-black uppercase px-2">Editing:</span>
@@ -926,7 +933,8 @@ export default function AdminDashboard({ session }: { session: any }) {
                         const table = activeTab === 'experiences' ? 'experiences' : 
                                       activeTab === 'portfolio' ? 'portfolio_items' : 
                                       activeTab === 'reviews' ? 'client_reviews' : 
-                                      activeTab === 'blogs' ? 'blogs' : 'achievements';
+                                      activeTab === 'blogs' ? 'blogs' : 
+                                      activeTab === 'clients' ? 'clients' : 'achievements';
                         
                         let cleanedItem: any = { ...item };
                         if (!cleanedItem.id || !cleanedItem.id.toString().includes('-')) {
@@ -1749,6 +1757,131 @@ export default function AdminDashboard({ session }: { session: any }) {
                 <textarea rows={3} value={item.text || ''} onChange={e => updateItem(item.id, 'text', e.target.value)} placeholder="Review Text" className="bg-slate-900/50 border border-white/10 rounded-lg px-3 py-2 text-white text-sm w-full"></textarea>
               </div>
             )}
+            {activeTab === 'clients' && editingItemId === item.id && (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-slate-900/25 p-4 rounded-2xl border border-white/5">
+                <div className="flex flex-col gap-3">
+                  <div>
+                    <label className="text-[10px] text-slate-400 font-bold uppercase tracking-wider ml-1">Client / Company Name</label>
+                    <input 
+                      type="text" 
+                      value={item.name || ''} 
+                      onChange={e => updateItem(item.id, 'name', e.target.value)} 
+                      placeholder="e.g. Google, Airbnb" 
+                      className="w-full mt-1 bg-slate-900/60 border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-blue-500 transition-all duration-200" 
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-slate-400 font-bold uppercase tracking-wider ml-1">Logo Image URL</label>
+                    <input 
+                      type="text" 
+                      value={item.image_url || ''} 
+                      onChange={e => updateItem(item.id, 'image_url', e.target.value)} 
+                      placeholder="Direct image URL or Drop logo panel" 
+                      className="w-full mt-1 bg-slate-900/60 border border-white/10 rounded-xl px-4 py-3 text-white text-sm focus:outline-none focus:border-blue-500 transition-all duration-200" 
+                    />
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-1">
+                  <label className="text-[10px] text-slate-400 font-bold uppercase tracking-wider ml-1">Upload Brand Logo</label>
+                  <div
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      setIsDraggingLogo(item.id + '_client_logo');
+                    }}
+                    onDragLeave={() => setIsDraggingLogo(null)}
+                    onDrop={async (e) => {
+                      e.preventDefault();
+                      setIsDraggingLogo(null);
+                      const file = e.dataTransfer.files?.[0];
+                      if (file && file.type.startsWith('image/')) {
+                        const uploadKey = `${item.id}_image_url`;
+                        setUploadingStates(prev => ({ ...prev, [uploadKey]: true }));
+                        try {
+                          const url = await uploadAsset(file);
+                          if (url) {
+                            updateItem(item.id, 'image_url', url);
+                            showNotification('Logo uploaded via drag & drop!');
+                          } else {
+                            showNotification('Drop upload failed', 'error');
+                          }
+                        } catch (err: any) {
+                          showNotification(err?.message || 'Upload error', 'error');
+                        } finally {
+                          setUploadingStates(prev => ({ ...prev, [uploadKey]: false }));
+                        }
+                      }
+                    }}
+                    className={`group mt-1 flex flex-col items-center justify-center border-2 border-dashed rounded-2xl p-6 transition-all duration-300 min-h-[140px] text-center relative overflow-hidden cursor-pointer
+                      ${isDraggingLogo === item.id + '_client_logo' 
+                        ? 'bg-blue-600/10 border-blue-500 scale-[0.99]' 
+                        : item.image_url 
+                          ? 'bg-slate-900/30 border-emerald-500/30 hover:border-emerald-500/50' 
+                          : 'bg-slate-900/40 border-white/10 hover:border-blue-500/40'}`}
+                  >
+                    {uploadingStates[`${item.id}_image_url`] ? (
+                      <div className="flex flex-col items-center gap-3">
+                        <div className="w-8 h-8 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                        <span className="text-xs text-blue-400 font-semibold animate-pulse">Uploading asset to Supabase Storage...</span>
+                      </div>
+                    ) : item.image_url ? (
+                      <div className="flex flex-col items-center gap-3 w-full">
+                        <div className="bg-slate-950/40 p-4 rounded-xl border border-white/5 flex items-center justify-center max-w-[150px] aspect-video">
+                          <img 
+                            src={item.image_url} 
+                            alt="Logo preview" 
+                            className="max-h-12 max-w-full object-contain filter grayscale invert brightness-200" 
+                          />
+                        </div>
+                        <div className="flex gap-2">
+                          <label className="text-[10px] bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold uppercase tracking-wider px-3 py-1.5 rounded-lg cursor-pointer transition-colors">
+                            Change File
+                            <input 
+                              type="file" 
+                              accept="image/*" 
+                              onChange={(e) => handleListUpload(e, item.id, 'image_url')} 
+                              className="hidden" 
+                            />
+                          </label>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              updateItem(item.id, 'image_url', '');
+                              showNotification('Logo URL cleared');
+                            }}
+                            className="text-[10px] bg-red-950/40 hover:bg-red-900/40 text-red-400 font-bold uppercase tracking-wider px-3 py-1.5 rounded-lg border border-red-500/10 transition-colors"
+                          >
+                            Remove
+                          </button>
+                        </div>
+                        <p className="text-[9px] text-slate-500 mt-1">Or drag and drop a new logo file here</p>
+                      </div>
+                    ) : (
+                      <label className="flex flex-col items-center gap-2 cursor-pointer w-full h-full justify-center">
+                        <div className="p-3 rounded-full bg-blue-500/10 text-blue-400 group-hover:scale-110 transition-transform duration-300">
+                          <Upload size={20} />
+                        </div>
+                        <div>
+                          <span className="text-xs font-semibold text-slate-200 group-hover:text-blue-400 transition-colors">
+                            Click to upload logo
+                          </span>
+                          <span className="text-xs text-slate-500"> or drag & drop</span>
+                        </div>
+                        <p className="text-[9px] text-slate-500">Supports JPEG, PNG, SVG, WEBP up to 5MB</p>
+                        <input 
+                          type="file" 
+                          accept="image/*" 
+                          onChange={(e) => handleListUpload(e, item.id, 'image_url')} 
+                          className="hidden" 
+                        />
+                      </label>
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
         ))}
       </div>
@@ -1785,6 +1918,7 @@ export default function AdminDashboard({ session }: { session: any }) {
               { id: 'achievements', label: 'Milestones', icon: <Award size={18} /> },
               { id: 'blogs', label: 'Blog', icon: <FileText size={18} /> },
               { id: 'reviews', label: 'Client Reviews', icon: <Users size={18} /> },
+              { id: 'clients', label: 'Client Logos', icon: <Layers size={18} /> },
               { id: 'messages', label: 'Messages', icon: <Mail size={18} /> },
             ].map((item) => (
               <button
@@ -1840,6 +1974,7 @@ export default function AdminDashboard({ session }: { session: any }) {
                      achievements: 'Milestones',
                      blogs: 'Blog',
                      reviews: 'Client Reviews',
+                     clients: 'Client Logos',
                      messages: 'Messages'
                    }[activeTab] || activeTab
                  }`}
@@ -1877,7 +2012,7 @@ export default function AdminDashboard({ session }: { session: any }) {
               {renderProfileForm()}
             </motion.div>
           )}
-          {['experiences', 'portfolio', 'achievements', 'blogs', 'reviews'].includes(activeTab) && (
+          {['experiences', 'portfolio', 'achievements', 'blogs', 'reviews', 'clients'].includes(activeTab) && (
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="bg-slate-800/40 backdrop-blur-xl border border-white/5 rounded-3xl p-8 shadow-2xl">
               <div className="flex justify-between items-center mb-8 pb-4 border-b border-white/5">
                 <h2 className="text-xl font-black text-white uppercase tracking-tighter">Content Management</h2>

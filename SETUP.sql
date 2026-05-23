@@ -106,6 +106,14 @@ CREATE TABLE IF NOT EXISTS site_stats (
   views BIGINT DEFAULT 0
 );
 
+-- 9. Clients Table
+CREATE TABLE IF NOT EXISTS clients (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  name TEXT,
+  image_url TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 -- Initialize global views counter
 INSERT INTO site_stats (id, views) VALUES ('global_views', 0) ON CONFLICT (id) DO NOTHING;
 

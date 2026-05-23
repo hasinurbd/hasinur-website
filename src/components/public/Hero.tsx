@@ -120,16 +120,6 @@ export default function Hero() {
           </div>
         </div>
       </motion.div>
-      
-      {/* Scroll indicator */}
-      <motion.div 
-        animate={{ y: [0, 10, 0] }}
-        transition={{ repeat: Infinity, duration: 2 }}
-        className="absolute bottom-10 left-1/2 -translate-x-1/2 w-6 h-10 border-2 border-white/20 rounded-full flex justify-center p-1 cursor-pointer"
-        onClick={() => document.getElementById('experience')?.scrollIntoView({ behavior: 'smooth' })}
-      >
-        <div className="w-1.5 h-2.5 bg-blue-500 rounded-full"></div>
-      </motion.div>
     </section>
   );
 }

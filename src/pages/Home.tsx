@@ -13,6 +13,7 @@ const Blogs = lazy(() => import('../components/public/Blogs'));
 const Contact = lazy(() => import('../components/public/Contact'));
 const Footer = lazy(() => import('../components/public/Footer'));
 const FloatingChat = lazy(() => import('../components/public/FloatingChat'));
+const Clients = lazy(() => import('../components/public/Clients'));
 
 const LoaderFallback = () => (
   <div className="w-full py-20 flex justify-center items-center">
@@ -71,6 +72,7 @@ export default function Home() {
       <main className="relative z-10 w-full overflow-hidden">
         <Hero />
         <Suspense fallback={<LoaderFallback />}>
+          <Clients />
           <Experience />
           <Skills />
           <Reviews />

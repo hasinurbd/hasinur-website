@@ -209,3 +209,43 @@ export const mockReviews = [
     text: 'Exceptional creativity and a keen eye for design. Hasinur not only provided great copy but also suggested visual directions that really made our campaigns pop.'
   }
 ];
+
+export const mockClients = [
+  {
+    id: '1',
+    name: 'Google',
+    image_url: 'https://upload.wikimedia.org/wikipedia/commons/2/2f/Google_2015_logo.svg',
+    created_at: new Date(Date.now() - 1000 * 60).toISOString()
+  },
+  {
+    id: '2',
+    name: 'Microsoft',
+    image_url: 'https://upload.wikimedia.org/wikipedia/commons/9/96/Microsoft_logo_2012.svg',
+    created_at: new Date(Date.now() - 1000 * 120).toISOString()
+  },
+  {
+    id: '3',
+    name: 'Netflix',
+    image_url: 'https://upload.wikimedia.org/wikipedia/commons/0/08/Netflix_2015_logo.svg',
+    created_at: new Date(Date.now() - 1000 * 180).toISOString()
+  },
+  {
+    id: '4',
+    name: 'Apple',
+    image_url: 'https://upload.wikimedia.org/wikipedia/commons/f/fa/Apple_logo_black.svg',
+    created_at: new Date(Date.now() - 1000 * 240).toISOString()
+  },
+  {
+    id: '5',
+    name: 'Airbnb',
+    image_url: 'https://upload.wikimedia.org/wikipedia/commons/6/69/Airbnb_Logo_Bélo.svg',
+    created_at: new Date(Date.now() - 1000 * 300).toISOString()
+  },
+  {
+    id: '6',
+    name: 'Vimeo',
+    image_url: 'https://upload.wikimedia.org/wikipedia/commons/8/8e/Vimeo_logo_2012.svg',
+    created_at: new Date(Date.now() - 1000 * 360).toISOString()
+  }
+];
+
