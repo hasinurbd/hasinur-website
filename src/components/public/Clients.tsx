@@ -57,7 +57,7 @@ export default function Clients() {
           {duplicatedLogos.map((logo, index) => (
             <div 
               key={`${logo.id}-${index}`} 
-              className="flex items-center justify-center h-16 w-32 px-3 shrink-0 bg-slate-900/30 hover:bg-slate-900/50 border border-white/[0.04] rounded-xl transition-all duration-300 hover:scale-105 hover:border-blue-500/20 shadow-sm shadow-black/10"
+              className="flex items-center justify-center h-16 w-32 px-4 shrink-0 bg-white hover:bg-slate-100/90 border border-white/10 rounded-xl transition-all duration-300 hover:scale-105 hover:border-blue-500/35 shadow-md shadow-black/5"
             >
               <img 
                 src={logo.image_url} 
@@ -65,7 +65,7 @@ export default function Clients() {
                 title={logo.name}
                 loading="lazy"
                 referrerPolicy="no-referrer"
-                className="max-h-10 max-w-full object-contain opacity-75 hover:opacity-100 transition-all duration-300 pointer-events-none" 
+                className="max-h-10 max-w-full object-contain opacity-95 hover:opacity-100 transition-all duration-300 pointer-events-none" 
               />
             </div>
           ))}

@@ -6,6 +6,33 @@ import { FloatingIcon, BackgroundBlobs } from './VisualElements';
 
 export default function Hero() {
   const { profile, avatarUrl } = useProfile();
+  const [displayedName, setDisplayedName] = React.useState('');
+
+  React.useEffect(() => {
+    if (!profile.name) return;
+    
+    let isMounted = true;
+    setDisplayedName('');
+    
+    const startTimeout = setTimeout(() => {
+      let i = 0;
+      const nameStr = profile.name;
+      const interval = setInterval(() => {
+        if (!isMounted) return;
+        if (i < nameStr.length) {
+          setDisplayedName(nameStr.slice(0, i + 1));
+          i++;
+        } else {
+          clearInterval(interval);
+        }
+      }, 70);
+    }, 450);
+
+    return () => {
+      isMounted = false;
+      clearTimeout(startTimeout);
+    };
+  }, [profile.name]);
 
   const handleDownloadCV = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -55,13 +82,14 @@ export default function Hero() {
         </div>
         
         <motion.h1 
-          className="text-4xl md:text-6xl font-black mb-4 tracking-tighter leading-tight bg-clip-text text-transparent bg-gradient-to-b from-white via-white to-white/60 select-none pb-1 drop-shadow-xl"
+          className="text-4xl md:text-6xl font-black mb-4 tracking-tighter leading-tight bg-clip-text text-transparent bg-gradient-to-b from-white via-white to-white/60 select-none pb-1 drop-shadow-xl inline-flex items-center"
         >
-          {profile.name}
+          <span>{displayedName}</span>
           <motion.span
             animate={{ opacity: [1, 0, 1] }}
             transition={{ duration: 0.8, repeat: Infinity }}
-            className="inline-block w-1 h-10 md:h-16 bg-blue-500 ml-2 translate-y-1 md:translate-y-2"
+            className="inline-block w-1 md:w-1.5 h-8 md:h-12 bg-blue-500 ml-2"
+            style={{ verticalAlign: 'middle' }}
           />
         </motion.h1>
 
