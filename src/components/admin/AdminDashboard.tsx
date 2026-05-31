@@ -1101,7 +1101,78 @@ export default function AdminDashboard({ session }: { session: any }) {
                            )}
                          </div>
                        ))}
-                       <label className="aspect-square rounded-xl border-2 border-dashed border-white/10 flex flex-col items-center justify-center cursor-pointer hover:border-blue-500/50 hover:bg-blue-500/5 transition-all group">
+                       <label 
+                          onDragOver={(e) => {
+                            e.preventDefault();
+                            setIsDraggingLogo(item.id + '_gallery');
+                          }}
+                          onDragLeave={() => setIsDraggingLogo(null)}
+                          onDrop={async (e) => {
+                            e.preventDefault();
+                            setIsDraggingLogo(null);
+                            const files = e.dataTransfer.files;
+                            if (files && files.length > 0) {
+                              setUploadingStates(prev => ({ ...prev, [`${item.id}_gallery`]: true }));
+                              try {
+                                const currentGallery = [...(item.gallery || (item.image_url ? [item.image_url] : []))];
+                                let newDocs = [...currentGallery];
+                                for (let i = 0; i < files.length; i++) {
+                                  const file = files[i];
+                                  if (file.type.startsWith('image/')) {
+                                    const url = await uploadAsset(file);
+                                    if (url) {
+                                      newDocs.push(url);
+                                      if (newDocs.length === 1 || !item.image_url) {
+                                        updateItem(item.id, 'image_url', url);
+                                      }
+                                      
+                                      // Auto-caption detection for first file
+                                      if (i === 0) {
+                                        const cleanCaption = cleanFilenameToCaption(file.name);
+                                        const currentTitle = item.title ? item.title.trim() : "";
+                                        const hasNoTitle = !currentTitle || currentTitle === "Untitled Project" || currentTitle === "New Portfolio Item" || currentTitle === "";
+                                        if (hasNoTitle) {
+                                          updateItem(item.id, 'title', cleanCaption);
+                                          showNotification(`Auto-caption: Title set to "${cleanCaption}"`);
+                                        } else {
+                                          showNotification(`Extracted filename: "${cleanCaption}"`);
+                                        }
+
+                                        // Extract tags
+                                        const stopWords = ['png', 'jpg', 'jpeg', 'svg', 'webp', 'gif', 'v1', 'v2', 'v3', 'draft', 'design', 'final', 'ver', 'version', 'logo', 'preview', 'artwork'];
+                                        const words = file.name.replace(/\.[^/.]+$/, "").split(/[-_+ ]+/);
+                                        const extractedTags = words
+                                          .map(w => w.trim().replace(/[^\w]/g, ""))
+                                          .filter(w => w.length > 2 && !stopWords.includes(w.toLowerCase()) && isNaN(Number(w)))
+                                          .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase());
+
+                                        setDetectedMetadata(prev => ({
+                                          ...prev,
+                                          [item.id]: {
+                                            title: cleanCaption,
+                                            filename: file.name,
+                                            tags: extractedTags
+                                          }
+                                        }));
+                                      }
+                                    }
+                                  }
+                                }
+                                updateItem(item.id, 'gallery', newDocs);
+                                showNotification('All images uploaded successfully!');
+                              } catch (err) {
+                                showNotification('Error uploading some files', 'error');
+                              } finally {
+                                setUploadingStates(prev => ({ ...prev, [`${item.id}_gallery`]: false }));
+                              }
+                            }
+                          }}
+                          className={`aspect-square rounded-xl border-2 border-dashed flex flex-col items-center justify-center cursor-pointer transition-all group ${
+                            isDraggingLogo === item.id + '_gallery'
+                              ? 'border-blue-500 bg-blue-500/10 scale-105'
+                              : 'border-white/10 hover:border-blue-500/50 hover:bg-blue-500/5'
+                          }`}
+                        >
                          {uploadingStates[`${item.id}_gallery`] ? (
                            <div className="flex flex-col items-center">
                              <Upload size={16} className="text-blue-500 animate-bounce" />
@@ -1113,14 +1184,75 @@ export default function AdminDashboard({ session }: { session: any }) {
                              <span className="text-[8px] font-black uppercase text-slate-600 mt-1">Add Photo</span>
                            </>
                          )}
-                         <input
-                           type="file"
-                           className="hidden"
-                           accept="image/*"
-                           disabled={uploadingStates[`${item.id}_gallery`]}
-                           onChange={async (e) => {
-                             const file = e.target.files?.[0];
-                             if (file) {
+                         
+                          <input
+                            type="file"
+                            className="hidden"
+                            accept="image/*"
+                            multiple
+                            disabled={uploadingStates[`${item.id}_gallery`]}
+                            onChange={async (e) => {
+                              const files = e.target.files;
+                              if (files && files.length > 0) {
+                                setUploadingStates(prev => ({ ...prev, [`${item.id}_gallery`]: true }));
+                                try {
+                                  const currentGallery = [...(item.gallery || (item.image_url ? [item.image_url] : []))];
+                                  let newDocs = [...currentGallery];
+                                  for (let i = 0; i < files.length; i++) {
+                                    const file = files[i];
+                                    const url = await uploadAsset(file);
+                                    if (url) {
+                                      newDocs.push(url);
+                                      if (newDocs.length === 1 || !item.image_url) {
+                                        updateItem(item.id, 'image_url', url);
+                                      }
+                                      if (i === 0) {
+                                        const cleanCaption = cleanFilenameToCaption(file.name);
+                                        const currentTitle = item.title ? item.title.trim() : "";
+                                        const hasNoTitle = !currentTitle || currentTitle === "Untitled Project" || currentTitle === "New Portfolio Item" || currentTitle === "";
+                                        if (hasNoTitle) {
+                                          updateItem(item.id, 'title', cleanCaption);
+                                          showNotification(`Auto-caption: Title set to "${cleanCaption}"`);
+                                        } else {
+                                          showNotification(`Extracted filename: "${cleanCaption}"`);
+                                        }
+
+                                        // Extract tags/skills suggestions
+                                        const stopWords = ['png', 'jpg', 'jpeg', 'svg', 'webp', 'gif', 'v1', 'v2', 'v3', 'draft', 'design', 'final', 'ver', 'version', 'logo', 'preview', 'artwork'];
+                                        const words = file.name.replace(/\.[^/.]+$/, "").split(/[-_+ ]+/);
+                                        const extractedTags = words
+                                          .map(w => w.trim().replace(/[^\w]/g, ""))
+                                          .filter(w => w.length > 2 && !stopWords.includes(w.toLowerCase()) && isNaN(Number(w)))
+                                          .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase());
+
+                                        setDetectedMetadata(prev => ({
+                                          ...prev,
+                                          [item.id]: {
+                                            title: cleanCaption,
+                                            filename: file.name,
+                                            tags: extractedTags
+                                          }
+                                        }));
+                                      }
+                                    }
+                                  }
+                                  updateItem(item.id, 'gallery', newDocs);
+                                  showNotification('All images uploaded successfully!');
+                                } catch (err) {
+                                  showNotification('Error uploading some files', 'error');
+                                } finally {
+                                  setUploadingStates(prev => ({ ...prev, [`${item.id}_gallery`]: false }));
+                                }
+                              }
+                            }}
+                          />
+                          <input
+                            type="file"
+                            className="hidden"
+                            disabled={true}
+                            onChange_unused={async (e) => {
+                              const file = e.target.files?.[0];
+                              if (file) {
                                setUploadingStates(prev => ({ ...prev, [`${item.id}_gallery`]: true }));
                                const url = await uploadAsset(file);
                                if (url) {
@@ -1475,37 +1607,94 @@ export default function AdminDashboard({ session }: { session: any }) {
                          )}
                        </div>
                      ))}
-                     <label className="aspect-square rounded-xl border-2 border-dashed border-white/10 flex flex-col items-center justify-center cursor-pointer hover:border-blue-500/50 hover:bg-blue-500/5 transition-all group">
-                       {uploadingStates[`${item.id}_gallery_achievements`] ? (
-                         <div className="flex flex-col items-center">
-                           <Upload size={14} className="text-blue-500 animate-bounce" />
-                         </div>
-                       ) : (
-                         <>
-                           <Plus size={16} className="text-slate-500" />
-                           <span className="text-[7px] font-black uppercase text-slate-600 mt-1">Add</span>
-                         </>
-                       )}
-                       <input
-                         type="file"
-                         className="hidden"
-                         accept="image/*"
-                         onChange={async (e) => {
-                           const file = e.target.files?.[0];
-                           if (file) {
-                             setUploadingStates(prev => ({ ...prev, [`${item.id}_gallery_achievements`]: true }));
-                             const url = await uploadAsset(file);
-                             if (url) {
-                               const currentGallery = item.gallery || (item.image_url ? [item.image_url] : []);
-                               const newGallery = [...currentGallery, url];
-                               updateItem(item.id, 'gallery', newGallery);
-                               if (!item.image_url) updateItem(item.id, 'image_url', url);
-                             }
-                             setUploadingStates(prev => ({ ...prev, [`${item.id}_gallery_achievements`]: false }));
-                           }
-                         }}
-                       />
-                     </label>
+                     
+                      <label 
+                        onDragOver={(e) => {
+                          e.preventDefault();
+                          setIsDraggingLogo(item.id + '_gallery_achievements');
+                        }}
+                        onDragLeave={() => setIsDraggingLogo(null)}
+                        onDrop={async (e) => {
+                          e.preventDefault();
+                          setIsDraggingLogo(null);
+                          const files = e.dataTransfer.files;
+                          if (files && files.length > 0) {
+                            setUploadingStates(prev => ({ ...prev, [`${item.id}_gallery_achievements`]: true }));
+                            try {
+                              const currentGallery = [...(item.gallery || (item.image_url ? [item.image_url] : []))];
+                              let newDocs = [...currentGallery];
+                              for (let i = 0; i < files.length; i++) {
+                                const file = files[i];
+                                if (file.type.startsWith('image/')) {
+                                  const url = await uploadAsset(file);
+                                  if (url) {
+                                    newDocs.push(url);
+                                    if (newDocs.length === 1 || !item.image_url) {
+                                      updateItem(item.id, 'image_url', url);
+                                    }
+                                  }
+                                }
+                              }
+                              updateItem(item.id, 'gallery', newDocs);
+                              showNotification('All images uploaded successfully!');
+                            } catch (err) {
+                              showNotification('Error uploading files', 'error');
+                            } finally {
+                              setUploadingStates(prev => ({ ...prev, [`${item.id}_gallery_achievements`]: false }));
+                            }
+                          }
+                        }}
+                        className={`aspect-square rounded-xl border-2 border-dashed flex flex-col items-center justify-center cursor-pointer transition-all group ${
+                          isDraggingLogo === item.id + '_gallery_achievements'
+                            ? 'border-blue-500 bg-blue-500/10 scale-105'
+                            : 'border-white/10 hover:border-blue-500/50 hover:bg-blue-500/5'
+                        }`}
+                      >
+                        {uploadingStates[`${item.id}_gallery_achievements`] ? (
+                          <div className="flex flex-col items-center">
+                            <Upload size={14} className="text-blue-500 animate-bounce" />
+                            <span className="text-[7px] font-black uppercase text-blue-400 mt-1">Syncing</span>
+                          </div>
+                        ) : (
+                          <>
+                            <Plus size={16} className="text-slate-500 animate-none" />
+                            <span className="text-[7px] font-black uppercase text-slate-600 mt-1">Add</span>
+                          </>
+                        )}
+                        <input
+                          type="file"
+                          className="hidden"
+                          accept="image/*"
+                          multiple
+                          disabled={uploadingStates[`${item.id}_gallery_achievements`]}
+                          onChange={async (e) => {
+                            const files = e.target.files;
+                            if (files && files.length > 0) {
+                              setUploadingStates(prev => ({ ...prev, [`${item.id}_gallery_achievements`]: true }));
+                              try {
+                                const currentGallery = [...(item.gallery || (item.image_url ? [item.image_url] : []))];
+                                let newDocs = [...currentGallery];
+                                for (let i = 0; i < files.length; i++) {
+                                  const file = files[i];
+                                  const url = await uploadAsset(file);
+                                  if (url) {
+                                    newDocs.push(url);
+                                    if (newDocs.length === 1 || !item.image_url) {
+                                      updateItem(item.id, 'image_url', url);
+                                    }
+                                  }
+                                }
+                                updateItem(item.id, 'gallery', newDocs);
+                                showNotification('All images uploaded successfully!');
+                              } catch (err) {
+                                showNotification('Error uploading files', 'error');
+                              } finally {
+                                setUploadingStates(prev => ({ ...prev, [`${item.id}_gallery_achievements`]: false }));
+                              }
+                            }
+                          }}
+                        />
+                      </label>
                   </div>
                 </div>
 
