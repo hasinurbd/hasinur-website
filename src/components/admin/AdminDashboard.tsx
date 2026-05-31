@@ -1246,54 +1246,6 @@ export default function AdminDashboard({ session }: { session: any }) {
                               }
                             }}
                           />
-                          <input
-                            type="file"
-                            className="hidden"
-                            disabled={true}
-                            onChange_unused={async (e) => {
-                              const file = e.target.files?.[0];
-                              if (file) {
-                               setUploadingStates(prev => ({ ...prev, [`${item.id}_gallery`]: true }));
-                               const url = await uploadAsset(file);
-                               if (url) {
-                                 const currentGallery = item.gallery || (item.image_url ? [item.image_url] : []);
-                                 const newGallery = [...currentGallery, url];
-                                 updateItem(item.id, 'gallery', newGallery);
-                                 if (!item.image_url) updateItem(item.id, 'image_url', url);
-
-                                 // Auto-caption detection
-                                 const cleanCaption = cleanFilenameToCaption(file.name);
-                                 const currentTitle = item.title ? item.title.trim() : "";
-                                 const hasNoTitle = !currentTitle || currentTitle === "Untitled Project" || currentTitle === "New Portfolio Item" || currentTitle === "";
-                                 
-                                 if (hasNoTitle) {
-                                   updateItem(item.id, 'title', cleanCaption);
-                                   showNotification(`Auto-caption: Title set to "${cleanCaption}"`);
-                                 } else {
-                                   showNotification(`Extracted filename: "${cleanCaption}"`);
-                                 }
-
-                                 // Extract tags/skills suggestions
-                                 const stopWords = ['png', 'jpg', 'jpeg', 'svg', 'webp', 'gif', 'v1', 'v2', 'v3', 'draft', 'design', 'final', 'ver', 'version', 'logo', 'preview', 'artwork'];
-                                 const words = file.name.replace(/\.[^/.]+$/, "").split(/[-_+ ]+/);
-                                 const extractedTags = words
-                                   .map(w => w.trim().replace(/[^\w]/g, ""))
-                                   .filter(w => w.length > 2 && !stopWords.includes(w.toLowerCase()) && isNaN(Number(w)))
-                                   .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase());
-
-                                 setDetectedMetadata(prev => ({
-                                   ...prev,
-                                   [item.id]: {
-                                     title: cleanCaption,
-                                     filename: file.name,
-                                     tags: extractedTags
-                                   }
-                                 }));
-                               }
-                               setUploadingStates(prev => ({ ...prev, [`${item.id}_gallery`]: false }));
-                             }
-                           }}
-                         />
                        </label>
                     </div>
                   </div>
@@ -1644,21 +1596,21 @@ export default function AdminDashboard({ session }: { session: any }) {
                             }
                           }
                         }}
-                        className={`aspect-square rounded-xl border-2 border-dashed flex flex-col items-center justify-center cursor-pointer transition-all group ${
+                        className={`aspect-square rounded-xl border-2 border-dashed flex flex-col items-center justify-center cursor-pointer transition-all duration-300 transform group ${
                           isDraggingLogo === item.id + '_gallery_achievements'
-                            ? 'border-blue-500 bg-blue-500/10 scale-105'
-                            : 'border-white/10 hover:border-blue-500/50 hover:bg-blue-500/5'
+                            ? 'border-blue-500 bg-blue-500/10 scale-105 shadow-[0_0_20px_rgba(37,99,235,0.25)]'
+                            : 'border-white/10 bg-slate-900/40 hover:border-blue-500/50 hover:bg-blue-500/5 hover:scale-[1.02] hover:shadow-[0_0_15px_rgba(37,99,235,0.1)]'
                         }`}
                       >
                         {uploadingStates[`${item.id}_gallery_achievements`] ? (
-                          <div className="flex flex-col items-center">
-                            <Upload size={14} className="text-blue-500 animate-bounce" />
-                            <span className="text-[7px] font-black uppercase text-blue-400 mt-1">Syncing</span>
+                          <div className="flex flex-col items-center gap-1">
+                            <Upload size={16} className="text-blue-400 animate-bounce" />
+                            <span className="text-[8px] font-black uppercase text-blue-400 mt-1 tracking-wider animate-pulse">Syncing</span>
                           </div>
                         ) : (
                           <>
-                            <Plus size={16} className="text-slate-500 animate-none" />
-                            <span className="text-[7px] font-black uppercase text-slate-600 mt-1">Add</span>
+                            <Plus size={18} className="text-slate-500 group-hover:text-blue-400 group-hover:scale-110 group-hover:rotate-90 transition-all duration-300" />
+                            <span className="text-[8px] font-black uppercase text-slate-500 group-hover:text-blue-400 tracking-wider mt-1 transition-colors">Add Image</span>
                           </>
                         )}
                         <input
