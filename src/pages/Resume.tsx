@@ -19,7 +19,13 @@ export default function Resume() {
         if (hasSupabaseConfig) {
           // Fetch profile
           const { data: prof } = await supabase.from('profiles').select('*').single();
-          if (prof) setProfile(prof);
+          if (prof) {
+            const sanitized = { ...prof };
+            if (sanitized.phone === "+8801518914773" || sanitized.phone === "01518914773" || (sanitized.phone && sanitized.phone.includes("1518914773"))) {
+              sanitized.phone = "+8801647706099";
+            }
+            setProfile(sanitized);
+          }
 
           // Fetch experiences
           const { data: exps } = await supabase.from('experiences').select('*').order('id', { ascending: true });

@@ -105,7 +105,7 @@ export default function Hero() {
             <motion.a 
               whileHover={{ scale: 1.05, boxShadow: "0 20px 40px rgba(37, 99, 235, 0.3)" }}
               whileTap={{ scale: 0.95 }}
-              href="https://wa.me/8801518914773"
+              href="https://wa.me/8801647706099"
               target="_blank"
               rel="noopener noreferrer"
               className="px-8 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white rounded-[2rem] font-black text-xs uppercase tracking-[0.2em] transition-all shadow-xl flex items-center gap-3 group relative overflow-hidden"

@@ -162,17 +162,23 @@ export default function AchievementDetail() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
           {/* Left Side: Images */}
           <div className="space-y-6">
-            <div className="relative aspect-[4/3] rounded-3xl overflow-hidden border border-white/10 shadow-2xl group bg-slate-900">
+            <div className="relative aspect-square rounded-3xl overflow-hidden border border-white/10 shadow-2xl group bg-slate-900/50 flex items-center justify-center">
+              {/* Premium blurred backdrop to fill aspect ratio gaps beautifully without cropping the square poster */}
+              <div 
+                className="absolute inset-0 bg-cover bg-center filter blur-2xl opacity-30 pointer-events-none scale-110 transition-all duration-500"
+                style={{ backgroundImage: `url(${gallery[activeImageIndex]})` }}
+              />
+              
               <AnimatePresence mode="wait">
                 <motion.img
                   key={activeImageIndex}
                   src={gallery[activeImageIndex]}
                   alt={achievement.title}
-                  initial={{ opacity: 0, scale: 1.1 }}
+                  initial={{ opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.9 }}
-                  transition={{ duration: 0.5 }}
-                  className="w-full h-full object-cover"
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  transition={{ duration: 0.4 }}
+                  className="w-full h-full object-contain relative z-10 p-3"
                 />
               </AnimatePresence>
               

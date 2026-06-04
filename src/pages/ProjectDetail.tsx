@@ -177,17 +177,23 @@ export default function ProjectDetail() {
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
           {/* Main Visuals - 7 Columns */}
           <div className="lg:col-span-12 xl:col-span-7 space-y-6">
-            <div className="relative aspect-video rounded-3xl overflow-hidden border border-white/10 shadow-2xl group bg-slate-900 print:rounded-none print:border-none">
+            <div className="relative aspect-video rounded-3xl overflow-hidden border border-white/10 shadow-2xl group bg-slate-900 print:rounded-none print:border-none flex items-center justify-center">
+              {/* Premium blurred backdrop to fill aspect ratio gaps beautifully without cropping any custom aspect ratio images */}
+              <div 
+                className="absolute inset-0 bg-cover bg-center filter blur-2xl opacity-30 pointer-events-none scale-110 transition-all duration-500"
+                style={{ backgroundImage: `url(${gallery[activeImageIndex]})` }}
+              />
+
               <AnimatePresence mode="wait">
                 <motion.img
                   key={activeImageIndex}
                   src={gallery[activeImageIndex]}
                   alt={project.title}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  exit={{ opacity: 0 }}
-                  transition={{ duration: 0.5 }}
-                  className="w-full h-full object-cover"
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  transition={{ duration: 0.4 }}
+                  className="w-full h-full object-contain relative z-10 p-3"
                 />
               </AnimatePresence>
               

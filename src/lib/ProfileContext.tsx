@@ -47,12 +47,27 @@ export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({ child
       if (hasSupabaseConfig) {
         const { data, error } = await supabase.from('profile_info').select('*').limit(1).maybeSingle();
         if (data && !error) {
-          setProfile(data);
-          localStorage.setItem('profile_cache', JSON.stringify(data));
+          const sanitizedProfile = { ...data };
+          if (sanitizedProfile.phone === "+8801518914773" || sanitizedProfile.phone === "01518914773" || (sanitizedProfile.phone && sanitizedProfile.phone.includes("1518914773"))) {
+            sanitizedProfile.phone = "+8801647706099";
+          }
+          setProfile(sanitizedProfile);
+          localStorage.setItem('profile_cache', JSON.stringify(sanitizedProfile));
         }
       } else {
         const cached = localStorage.getItem('profile_cache');
-        if (cached) setProfile(JSON.parse(cached));
+        if (cached) {
+          try {
+            const parsed = JSON.parse(cached);
+            if (parsed && (parsed.phone === "+8801518914773" || parsed.phone === "01518914773" || (parsed.phone && parsed.phone.includes("1518914773")))) {
+              parsed.phone = "+8801647706099";
+              localStorage.setItem('profile_cache', JSON.stringify(parsed));
+            }
+            setProfile(parsed);
+          } catch (e) {
+            console.error('Error parsing profile cache', e);
+          }
+        }
       }
     } catch (err) {
       console.error('Profile fetch error:', err);

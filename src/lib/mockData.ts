@@ -3,7 +3,7 @@ export const defaultMockProfile = {
   title: "Creative Designer & Full Stack Developer",
   bio: "Creative Designer & Full Stack Developer specializing in graphic design, digital branding, and modern web development. Currently a CSE Undergraduate at UIU, merging technical expertise with artistic vision.",
   email: "hasinurrahman.me@gmail.com",
-  phone: "+8801518914773",
+  phone: "+8801647706099",
   location: "Dhaka, Bangladesh",
   avatar_url: "https://jtcepxgoqbyfwljezndt.supabase.co/storage/v1/object/public/portfolio_assets/hasinur_profile_pic_design_in_ps.png",
   resume_url: "#",
@@ -30,7 +30,41 @@ export const saveMockData = (key: string, data: any) => {
   }
 };
 
-export const getMockProfile = () => getMockData('mock_profile', defaultMockProfile);
+export const getMockProfile = () => {
+  const profile = getMockData('mock_profile', defaultMockProfile);
+  
+  // Upgrade old phone number in mock_profile if it matches the legacy number
+  if (profile && (
+    profile.phone === "+8801518914773" || 
+    profile.phone === "01518914773" || 
+    (profile.phone && profile.phone.includes("1518914773"))
+  )) {
+    profile.phone = "+8801647706099";
+    saveMockProfile(profile);
+  }
+  
+  // Also upgrade old phone number in profile_cache if present
+  if (typeof window !== 'undefined') {
+    const cachedStr = localStorage.getItem('profile_cache');
+    if (cachedStr) {
+      try {
+        const cached = JSON.parse(cachedStr);
+        if (cached && (
+          cached.phone === "+8801518914773" || 
+          cached.phone === "01518914773" || 
+          (cached.phone && cached.phone.includes("1518914773"))
+        )) {
+          cached.phone = "+8801647706099";
+          localStorage.setItem('profile_cache', JSON.stringify(cached));
+        }
+      } catch (err) {
+        console.error('Error parsing profile_cache:', err);
+      }
+    }
+  }
+  
+  return profile;
+};
 export const saveMockProfile = (data: any) => saveMockData('mock_profile', data);
 
 export const mockExperiences = [

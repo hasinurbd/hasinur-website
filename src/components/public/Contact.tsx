@@ -62,7 +62,11 @@ export default function Contact() {
       const fetchProfile = async () => {
         const { data, error } = await supabase.from('profile_info').select('*').limit(1).maybeSingle();
         if (data && !error) {
-          setProfile(data);
+          const sanitized = { ...data };
+          if (sanitized.phone === "+8801518914773" || sanitized.phone === "01518914773" || (sanitized.phone && sanitized.phone.includes("1518914773"))) {
+            sanitized.phone = "+8801647706099";
+          }
+          setProfile(sanitized);
         }
       };
       fetchProfile();

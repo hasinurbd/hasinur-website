@@ -959,8 +959,24 @@ export default function AdminDashboard({ session }: { session: any }) {
 
                       // Save this specific item
                       const key = `mock_${activeTab}`;
-                      const currentLocalData = getMockData(key, []);
-                      const updatedLocalData = currentLocalData.map((d: any) => d.id === item.id ? { ...item, id: finalId } : d);
+                      const defaultDataMap: Record<string, any[]> = {
+                        experiences: mockExperiences,
+                        portfolio: mockPortfolioItems,
+                        achievements: mockAchievements,
+                        reviews: mockReviews,
+                        blogs: mockBlogs,
+                        clients: mockClients
+                      };
+                      const currentLocalData = getMockData(key, defaultDataMap[activeTab] || []);
+                      
+                      const existsIdx = currentLocalData.findIndex((d: any) => d.id === item.id);
+                      let updatedLocalData;
+                      if (existsIdx !== -1) {
+                        updatedLocalData = [...currentLocalData];
+                        updatedLocalData[existsIdx] = { ...cleanedItem };
+                      } else {
+                        updatedLocalData = [cleanedItem, ...currentLocalData];
+                      }
                       saveMockData(key, updatedLocalData);
 
                       if (finalId !== item.id) {
@@ -2043,7 +2059,7 @@ export default function AdminDashboard({ session }: { session: any }) {
                       className="bg-slate-900/50 border border-white/10 rounded-lg px-3 py-2 text-white text-sm flex-1" 
                     />
                   </div>
-                  <label className="group flex-1 cursor-pointer bg-transparent hover:bg-white/5 p-2 rounded-full border border-white/10 transition-colors flex items-center justify-center gap-2 min-h-[40px] overflow-hidden">
+                  <label className="group flex-1 cursor-pointer bg-transparent hover:bg-white/5 p-2 rounded-full border border-white/10 transition-colors flex items-center justify-center gap-2 min-h-[40px] overflow-hidden relative">
                     {uploadingStates[`${item.id}_avatar_url`] ? <span className="text-sm text-blue-400 animate-pulse">Uploading...</span> : (
                       <>
                         {item.avatar_url ? <img src={item.avatar_url} alt="Avatar" className="absolute inset-0 w-full h-full object-cover" /> : <Upload size={16} className="text-blue-400" />}
