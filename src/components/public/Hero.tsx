@@ -13,17 +13,18 @@ export default function Hero() {
     
     let isMounted = true;
     setDisplayedName('');
+    let interval: any = null;
     
     const startTimeout = setTimeout(() => {
       let i = 0;
       const nameStr = profile.name;
-      const interval = setInterval(() => {
+      interval = setInterval(() => {
         if (!isMounted) return;
         if (i < nameStr.length) {
           setDisplayedName(nameStr.slice(0, i + 1));
           i++;
         } else {
-          clearInterval(interval);
+          if (interval) clearInterval(interval);
         }
       }, 70);
     }, 450);
@@ -31,6 +32,7 @@ export default function Hero() {
     return () => {
       isMounted = false;
       clearTimeout(startTimeout);
+      if (interval) clearInterval(interval);
     };
   }, [profile.name]);
 

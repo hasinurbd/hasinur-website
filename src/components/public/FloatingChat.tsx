@@ -13,6 +13,15 @@ export default function FloatingChat() {
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
+  const isMounted = useRef(true);
+
+  useEffect(() => {
+    isMounted.current = true;
+    return () => {
+      isMounted.current = false;
+    };
+  }, []);
+
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isOpen]);
@@ -41,6 +50,7 @@ export default function FloatingChat() {
       // Simulate typing delay based on message length
       const delay = Math.min(2000, 400 + userMessage.length * 10);
       await new Promise(resolve => setTimeout(resolve, delay));
+      if (!isMounted.current) return;
       
       const lowerInput = userMessage.toLowerCase();
       let bestMatch = `I'm sorry, I don't have an answer for that right now. Please use the contact form to reach ${profile.name} directly!`;
@@ -65,12 +75,18 @@ export default function FloatingChat() {
         bestMatch = "You're very welcome! Feel free to ask anything else.";
       }
 
-      setMessages(prev => [...prev, { role: 'model', content: bestMatch }]);
+      if (isMounted.current) {
+        setMessages(prev => [...prev, { role: 'model', content: bestMatch }]);
+      }
     } catch (error) {
       console.error(error);
-      setMessages(prev => [...prev, { role: 'model', content: "Sorry, I'm having trouble processing that." }]);
+      if (isMounted.current) {
+        setMessages(prev => [...prev, { role: 'model', content: "Sorry, I'm having trouble processing that." }]);
+      }
     } finally {
-      setIsLoading(false);
+      if (isMounted.current) {
+        setIsLoading(false);
+      }
     }
   };
 

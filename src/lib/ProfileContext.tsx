@@ -32,14 +32,14 @@ interface ProfileContextType {
 
 const ProfileContext = createContext<ProfileContextType | undefined>(undefined);
 
+const getAvatarUrl = (url?: string) => {
+  if (url && url.length > 5 && !url.includes('dicebear')) return url;
+  return "https://jtcepxgoqbyfwljezndt.supabase.co/storage/v1/object/public/portfolio_assets/hasinur_profile_pic_design_in_ps.png";
+};
+
 export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [profile, setProfile] = useState<Profile>(getMockProfile());
   const [loading, setLoading] = useState(true);
-
-  const getAvatarUrl = (url?: string) => {
-    if (url && url.length > 5 && !url.includes('dicebear')) return url;
-    return "https://jtcepxgoqbyfwljezndt.supabase.co/storage/v1/object/public/portfolio_assets/hasinur_profile_pic_design_in_ps.png";
-  };
 
   const fetchProfile = async () => {
     setLoading(true);
