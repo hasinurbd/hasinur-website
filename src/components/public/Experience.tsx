@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Briefcase, GraduationCap, ChevronRight, Palette, CheckCircle2 } from 'lucide-react';
 import { getMockData, mockExperiences } from '../../lib/mockData';
 import { supabase, hasSupabaseConfig } from '../../lib/supabaseClient';
-import { cn } from '../../lib/utils';
+import { cn, sanitizeHtml } from '../../lib/utils';
 import { FloatingIcon, BackgroundBlobs } from './VisualElements';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -244,7 +244,7 @@ export default function Experience() {
                       {exp.description && (
                         <div 
                           className={cn("text-xs md:text-[13px] text-slate-400/90 leading-relaxed font-medium markdown-content", index % 2 !== 0 && "md:text-right")}
-                          dangerouslySetInnerHTML={{ __html: exp.description }} 
+                          dangerouslySetInnerHTML={{ __html: sanitizeHtml(exp.description) }} 
                         />
                       )}
 

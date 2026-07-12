@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { ExternalLink, Calendar, Tag, ArrowLeft, Heart, Share2, FileDown, MessageSquare, ChevronLeft, ChevronRight, Send } from 'lucide-react';
 import { supabase, hasSupabaseConfig } from '../lib/supabaseClient';
 import { getMockData, mockPortfolioItems } from '../lib/mockData';
+import { sanitizeHtml, useDocumentMetadata } from '../lib/utils';
 import Navbar from '../components/public/Navbar';
 import Footer from '../components/public/Footer';
 
@@ -22,6 +23,13 @@ export default function ProjectDetail() {
   const [commentName, setCommentName] = useState('');
   const [commentText, setCommentText] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useDocumentMetadata({
+    title: project?.title,
+    description: project?.description,
+    image: project?.image_url || (project?.gallery && project.gallery[0]),
+    type: 'article'
+  });
 
   useEffect(() => {
     const fetchProject = async () => {
@@ -235,7 +243,7 @@ export default function ProjectDetail() {
             <div className="hidden print:block mt-8">
               <h1 className="text-3xl font-bold mb-2">{project.title}</h1>
               <p className="text-slate-600 mb-4">{project.category}</p>
-              <div className="border-t border-slate-200 pt-4 prose prose-slate max-w-none" dangerouslySetInnerHTML={{ __html: project.description }} />
+              <div className="border-t border-slate-200 pt-4 prose prose-slate max-w-none" dangerouslySetInnerHTML={{ __html: sanitizeHtml(project.description) }} />
             </div>
           </div>
 
@@ -261,7 +269,7 @@ export default function ProjectDetail() {
 
              <div 
                className="text-slate-300 leading-relaxed text-lg prose prose-invert max-w-none"
-               dangerouslySetInnerHTML={{ __html: project.description }}
+               dangerouslySetInnerHTML={{ __html: sanitizeHtml(project.description) }}
              />
 
              {/* Action Stats Bar */}

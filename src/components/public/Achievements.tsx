@@ -4,7 +4,7 @@ import { supabase, hasSupabaseConfig } from '../../lib/supabaseClient';
 import { ArrowRight, Award, FileText, MessageSquare, Heart } from 'lucide-react';
 import { BackgroundBlobs, FloatingIcon } from './VisualElements';
 import { Link } from 'react-router-dom';
-import { slugify } from '../../lib/utils';
+import { slugify, sanitizeHtml } from '../../lib/utils';
 
 export default function Achievements() {
   const [achievements, setAchievements] = useState<any[]>([]);
@@ -91,7 +91,7 @@ export default function Achievements() {
                   {ach.title}
                 </h3>
                 
-                <div className="text-slate-400 text-sm mb-6 line-clamp-2 leading-relaxed flex-grow max-w-none [&_ul]:list-disc [&_ul]:ml-5 [&_ol]:list-decimal [&_ol]:ml-5 [&_p]:mb-2" dangerouslySetInnerHTML={{ __html: ach.description }} />
+                <div className="text-slate-400 text-sm mb-6 line-clamp-2 leading-relaxed flex-grow max-w-none [&_ul]:list-disc [&_ul]:ml-5 [&_ol]:list-decimal [&_ol]:ml-5 [&_p]:mb-2" dangerouslySetInnerHTML={{ __html: sanitizeHtml(ach.description) }} />
                 
                 <div className="inline-flex items-center text-xs font-black text-blue-500 group-hover:text-blue-400 transition-colors tracking-widest mt-auto uppercase">
                   READ FULL STORY <ArrowRight size={14} className="ml-2 transition-transform group-hover:translate-x-1" />

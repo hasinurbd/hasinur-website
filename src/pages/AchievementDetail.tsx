@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Award, Calendar, User, ArrowLeft, Send, MessageSquare, ChevronLeft, ChevronRight, Heart, Share2, FileDown } from 'lucide-react';
 import { supabase, hasSupabaseConfig } from '../lib/supabaseClient';
 import { getMockData, mockAchievements } from '../lib/mockData';
+import { sanitizeHtml, useDocumentMetadata } from '../lib/utils';
 import Navbar from '../components/public/Navbar';
 import Footer from '../components/public/Footer';
 
@@ -22,6 +23,13 @@ export default function AchievementDetail() {
   const [commentName, setCommentName] = useState('');
   const [commentText, setCommentText] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useDocumentMetadata({
+    title: achievement?.title,
+    description: achievement?.description,
+    image: achievement?.image_url || (achievement?.gallery && achievement.gallery[0]),
+    type: 'article'
+  });
 
   useEffect(() => {
     const fetchAchievement = async () => {
@@ -244,7 +252,7 @@ export default function AchievementDetail() {
 
             <div 
               className="text-slate-300 leading-relaxed text-lg prose prose-invert max-w-none"
-              dangerouslySetInnerHTML={{ __html: achievement.description }}
+              dangerouslySetInnerHTML={{ __html: sanitizeHtml(achievement.description) }}
             />
 
             {/* Interaction Bar */}

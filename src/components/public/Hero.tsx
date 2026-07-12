@@ -1,6 +1,7 @@
 import React from 'react';
 import { Facebook, Linkedin, Twitter, Youtube, Download, Palette, CodeXml, Layers, Cpu, Figma, Instagram } from 'lucide-react';
 import { useProfile } from '../../lib/ProfileContext';
+import { sanitizeHtml } from '../../lib/utils';
 import { motion } from 'motion/react';
 import { FloatingIcon, BackgroundBlobs } from './VisualElements';
 
@@ -98,7 +99,7 @@ export default function Hero() {
         {profile.bio && (
           <div 
             className="text-slate-400 max-w-xl text-sm md:text-base mb-8 leading-relaxed font-medium select-none px-4 drop-shadow-md"
-            dangerouslySetInnerHTML={{ __html: profile.bio }}
+            dangerouslySetInnerHTML={{ __html: sanitizeHtml(profile.bio) }}
           />
         )}
         

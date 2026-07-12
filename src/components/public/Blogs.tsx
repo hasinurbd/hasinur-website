@@ -4,7 +4,7 @@ import { getMockData, mockBlogs as defaultMockBlogs } from '../../lib/mockData';
 import { Calendar, ArrowRight, FileText, MessageSquare, Heart } from 'lucide-react';
 import { FloatingIcon, BackgroundBlobs } from './VisualElements';
 import { Link } from 'react-router-dom';
-import { slugify } from '../../lib/utils';
+import { slugify, sanitizeHtml } from '../../lib/utils';
 
 export default function Blogs() {
   const [blogs, setBlogs] = useState<any[]>([]);
@@ -98,7 +98,7 @@ export default function Blogs() {
                     {blog.title}
                   </h3>
                   
-                  <div className="text-slate-400 text-sm mb-6 line-clamp-2 leading-relaxed" dangerouslySetInnerHTML={{ __html: blog.content }} />
+                  <div className="text-slate-400 text-sm mb-6 line-clamp-2 leading-relaxed" dangerouslySetInnerHTML={{ __html: sanitizeHtml(blog.content) }} />
                   
                   <div className="inline-flex items-center text-[10px] font-black text-white group-hover:text-blue-400 transition-colors tracking-[0.2em] mt-auto uppercase">
                     READ ARTICLE <ArrowRight size={14} className="ml-2 transition-transform group-hover:translate-x-1" />

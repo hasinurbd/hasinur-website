@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Mail, Phone, MapPin, Globe, Award, Briefcase, Code, FileText, Printer, ArrowLeft, Loader2 } from 'lucide-react';
 import { supabase, hasSupabaseConfig } from '../lib/supabaseClient';
 import { getMockProfile, getMockData, mockExperiences, mockPortfolioItems, mockAchievements } from '../lib/mockData';
+import { sanitizeHtml } from '../lib/utils';
 
 export default function Resume() {
   const navigate = useNavigate();
@@ -155,7 +156,7 @@ export default function Resume() {
             </div>
             <div 
               className="text-xs text-slate-600 print:text-slate-800 leading-relaxed font-medium"
-              dangerouslySetInnerHTML={{ __html: profile.bio || "" }}
+              dangerouslySetInnerHTML={{ __html: sanitizeHtml(profile.bio || "") }}
             />
           </div>
 
@@ -255,7 +256,7 @@ export default function Resume() {
                     )}
                     <div 
                       className="text-[10px] text-slate-600 print:text-slate-800 line-clamp-1 font-medium leading-relaxed"
-                      dangerouslySetInnerHTML={{ __html: ach.description }}
+                      dangerouslySetInnerHTML={{ __html: sanitizeHtml(ach.description) }}
                     />
                   </div>
                 ))}

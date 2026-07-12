@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { FileText, Calendar, Clock, ArrowLeft, Send, MessageSquare, ChevronLeft, ChevronRight, Heart, Share2, FileDown } from 'lucide-react';
 import { supabase, hasSupabaseConfig } from '../lib/supabaseClient';
 import { getMockData, mockBlogs } from '../lib/mockData';
+import { sanitizeHtml, useDocumentMetadata } from '../lib/utils';
 import Navbar from '../components/public/Navbar';
 import Footer from '../components/public/Footer';
 
@@ -22,6 +23,13 @@ export default function BlogDetail() {
   const [commentName, setCommentName] = useState('');
   const [commentText, setCommentText] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  useDocumentMetadata({
+    title: blog?.title,
+    description: blog?.content,
+    image: blog?.image_url || (blog?.gallery && blog.gallery[0]),
+    type: 'article'
+  });
 
   useEffect(() => {
     const fetchBlog = async () => {
@@ -232,7 +240,7 @@ export default function BlogDetail() {
         <article 
           className="prose prose-invert prose-lg max-w-none text-slate-300 leading-relaxed font-medium"
         >
-          <div dangerouslySetInnerHTML={{ __html: blog.content }} />
+          <div dangerouslySetInnerHTML={{ __html: sanitizeHtml(blog.content) }} />
         </article>
 
         {/* Interaction Bar */}
