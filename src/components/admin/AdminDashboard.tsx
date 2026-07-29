@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { LogOut, Home, User, Briefcase, FileImage, Award, Save, Plus, Trash2, Mail, FileText, Upload, BarChart3, Users, Eye, MousePointerClick, Heart, MessageSquare, ArrowLeft, ArrowRight, ChevronLeft, ChevronRight, X, Layers } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase, hasSupabaseConfig, uploadAsset } from '../../lib/supabaseClient';
-import { getMockProfile, saveMockProfile, getMockData, saveMockData, mockExperiences, mockPortfolioItems, mockAchievements, mockBlogs, defaultMockProfile, mockReviews, mockClients } from '../../lib/mockData';
+import { getMockProfile, saveMockProfile, getMockData, saveMockData, mockExperiences, mockPortfolioItems, mockAchievements, mockBlogs, defaultMockProfile, mockReviews, mockClients, mockMessages } from '../../lib/mockData';
 import JoditEditor from 'jodit-react';
 import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, Tooltip, CartesianGrid, PieChart, Pie, Cell, BarChart, Bar } from 'recharts';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -27,8 +27,9 @@ export default function AdminDashboard({ session }: { session: any }) {
   const { profile, refreshProfile } = useProfile();
 
   const activeTab = useMemo(() => {
-    const path = location.pathname.replace('/admin', '').replace('/', '');
-    return ['dashboard', 'profile', 'experiences', 'portfolio', 'achievements', 'blogs', 'reviews', 'messages', 'clients'].includes(path) ? path : 'dashboard';
+    const rawPath = location.pathname.replace(/^\/admin\/?/, '');
+    const cleanTab = rawPath.split('/')[0] || 'dashboard';
+    return ['dashboard', 'profile', 'experiences', 'portfolio', 'achievements', 'blogs', 'reviews', 'messages', 'clients'].includes(cleanTab) ? cleanTab : 'dashboard';
   }, [location.pathname]);
 
   const TABS_CONFIG: Record<string, { table: string, label: string, orderBy: string }> = useMemo(() => ({
@@ -41,18 +42,20 @@ export default function AdminDashboard({ session }: { session: any }) {
     clients: { table: 'clients', label: 'Client Logos', orderBy: 'created_at' }
   }), []);
 
-  const [profileData, setProfileData] = useState(profile);
+  const [profileData, setProfileData] = useState<any>(profile || defaultMockProfile);
   const [listData, setListData] = useState<any[]>([]);
   const [editingItemId, setEditingItemId] = useState<string | null>(null);
   const [realtimeActivity, setRealtimeActivity] = useState<any[]>([]);
 
   useEffect(() => {
-    setProfileData(profile);
+    if (profile) setProfileData(profile);
   }, [profile]);
 
   useEffect(() => {
-    document.title = `${profileData?.name || 'S M Hasinur Rahman'} | Admin - ${activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}`;
-  }, [profileData.name, activeTab]);
+    const name = profileData?.name || 'S M Hasinur Rahman';
+    const tabName = (activeTab || 'dashboard').charAt(0).toUpperCase() + (activeTab || 'dashboard').slice(1);
+    document.title = `${name} | Admin - ${tabName}`;
+  }, [profileData?.name, activeTab]);
 
   const editorConfig = useMemo(() => ({
     theme: 'dark',
@@ -92,7 +95,8 @@ export default function AdminDashboard({ session }: { session: any }) {
           achievements: mockAchievements,
           reviews: mockReviews,
           blogs: mockBlogs,
-          clients: mockClients
+          clients: mockClients,
+          messages: mockMessages
         };
         const rawData = getMockData(key, defaultDataMap[activeTab] || []);
         // Local sorting
@@ -123,55 +127,86 @@ export default function AdminDashboard({ session }: { session: any }) {
     } else {
       if (activeTab === 'profile') {
         const fetchProfile = async () => {
-          const { data, error } = await supabase.from('profile_info').select('*').single();
-          if (data && !error) {
-            setProfileData({ ...defaultMockProfile, ...data });
-            localStorage.setItem('mock_profile', JSON.stringify({ ...defaultMockProfile, ...data }));
-          } else {
+          try {
+            const { data, error } = await supabase.from('profile_info').select('*').limit(1).maybeSingle();
+            if (data && !error) {
+              setProfileData({ ...defaultMockProfile, ...data });
+              localStorage.setItem('mock_profile', JSON.stringify({ ...defaultMockProfile, ...data }));
+            } else {
+              setProfileData(getMockProfile());
+            }
+          } catch (e) {
             setProfileData(getMockProfile());
           }
         };
         fetchProfile();
-      } else if (TABS_CONFIG[activeTab]) {
-        const config = TABS_CONFIG[activeTab];
+      } else if (TABS_CONFIG[activeTab] || activeTab === 'messages') {
+        const config = TABS_CONFIG[activeTab] || { table: 'messages', label: 'Messages', orderBy: 'created_at' };
         const fetchData = async () => {
-          // Attempt sorting by configured field
-          const { data, error } = await supabase.from(config.table).select('*').order(config.orderBy, { ascending: false });
-          
-          let finalData = data;
-          
-          // If sorting fails (e.g. column missing), fallback to created_at
-          if (error && error.message.includes('column')) {
-            const { data: fallbackData } = await supabase.from(config.table).select('*').order('created_at', { ascending: false });
-            finalData = fallbackData;
-          }
+          try {
+            // Attempt sorting by configured field
+            const { data, error } = await supabase.from(config.table).select('*').order(config.orderBy, { ascending: false });
+            
+            let finalData = data;
+            
+            // If sorting fails or column missing, fallback to select all
+            if (error) {
+              const { data: fallbackData } = await supabase.from(config.table).select('*');
+              finalData = fallbackData;
+            }
 
-          if (finalData && (finalData.length > 0 || activeTab === 'messages')) {
-            // Apply refined client-side sorting for specific cases like "Present"
-            const sorted = [...finalData].sort((a, b) => {
-              const getSortValue = (item: any) => {
-                if (activeTab === 'experiences' && item.date_range?.toLowerCase().includes('present')) {
-                  return new Date(8640000000000000).getTime() + new Date(item.start_date || item.created_at || 0).getTime();
-                }
-                if (activeTab === 'experiences') {
-                   const parts = item.date_range?.split(' to ');
-                   if (parts?.length === 2) {
-                     const end = new Date(parts[1]);
-                     if (!isNaN(end.getTime())) return end.getTime();
-                   }
-                }
-                const d = item[config.orderBy] || item.created_at;
-                return new Date(d || 0).getTime();
+            if (finalData && finalData.length > 0) {
+              // Apply refined client-side sorting for specific cases like "Present"
+              const sorted = [...finalData].sort((a, b) => {
+                const getSortValue = (item: any) => {
+                  if (activeTab === 'experiences' && item.date_range?.toLowerCase().includes('present')) {
+                    return new Date(8640000000000000).getTime() + new Date(item.start_date || item.created_at || 0).getTime();
+                  }
+                  if (activeTab === 'experiences') {
+                     const parts = item.date_range?.split(' to ');
+                     if (parts?.length === 2) {
+                       const end = new Date(parts[1]);
+                       if (!isNaN(end.getTime())) return end.getTime();
+                     }
+                  }
+                  const d = item[config.orderBy] || item.created_at;
+                  return new Date(d || 0).getTime();
+                };
+                
+                const valA = getSortValue(a);
+                const valB = getSortValue(b);
+                
+                if (valB !== valA) return valB - valA;
+                return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
+              });
+              setListData(sorted);
+            } else {
+              const key = `mock_${activeTab}`;
+              const defaultDataMap: Record<string, any[]> = {
+                experiences: mockExperiences,
+                portfolio: mockPortfolioItems,
+                achievements: mockAchievements,
+                reviews: mockReviews,
+                blogs: mockBlogs,
+                clients: mockClients,
+                messages: mockMessages
               };
-              
-              const valA = getSortValue(a);
-              const valB = getSortValue(b);
-              
-              if (valB !== valA) return valB - valA;
-              return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
-            });
-            setListData(sorted);
-          } else {
+              const rawMock = getMockData(key, defaultDataMap[activeTab] || []);
+              const sortedMock = [...rawMock].sort((a: any, b: any) => {
+                if (activeTab === 'experiences') {
+                  const isOngoingA = a.date_range?.toLowerCase().includes('present');
+                  const isOngoingB = b.date_range?.toLowerCase().includes('present');
+                  if (isOngoingA && !isOngoingB) return -1;
+                  if (!isOngoingA && isOngoingB) return 1;
+                }
+                const d1 = a[config.orderBy] || a.created_at;
+                const d2 = b[config.orderBy] || b.created_at;
+                return new Date(d2 || 0).getTime() - new Date(d1 || 0).getTime();
+              });
+              setListData(sortedMock);
+            }
+          } catch (err) {
+            console.error('Data fetch error in tab', activeTab, err);
             const key = `mock_${activeTab}`;
             const defaultDataMap: Record<string, any[]> = {
               experiences: mockExperiences,
@@ -179,21 +214,10 @@ export default function AdminDashboard({ session }: { session: any }) {
               achievements: mockAchievements,
               reviews: mockReviews,
               blogs: mockBlogs,
-              clients: mockClients
+              clients: mockClients,
+              messages: mockMessages
             };
-            const rawMock = getMockData(key, defaultDataMap[activeTab] || []);
-            const sortedMock = [...rawMock].sort((a: any, b: any) => {
-              if (activeTab === 'experiences') {
-                const isOngoingA = a.date_range?.toLowerCase().includes('present');
-                const isOngoingB = b.date_range?.toLowerCase().includes('present');
-                if (isOngoingA && !isOngoingB) return -1;
-                if (!isOngoingA && isOngoingB) return 1;
-              }
-              const d1 = a[config.orderBy] || a.created_at;
-              const d2 = b[config.orderBy] || b.created_at;
-              return new Date(d2 || 0).getTime() - new Date(d1 || 0).getTime();
-            });
-            setListData(sortedMock);
+            setListData(getMockData(key, defaultDataMap[activeTab] || []));
           }
         };
         fetchData();
@@ -203,10 +227,15 @@ export default function AdminDashboard({ session }: { session: any }) {
   }, [activeTab, TABS_CONFIG]);
 
   const handleLogout = async () => {
+    localStorage.removeItem('admin_session');
     if (hasSupabaseConfig) {
-      await supabase.auth.signOut();
+      try {
+        await supabase.auth.signOut();
+      } catch (e) {
+        console.warn('Sign out error:', e);
+      }
     }
-    navigate('/admin');
+    window.location.href = '/admin';
   };
 
   const handleSaveProfile = async (e: React.FormEvent) => {
@@ -538,19 +567,22 @@ export default function AdminDashboard({ session }: { session: any }) {
     }
   }, [activeTab]);
 
-  const [dynamicChartData, setDynamicChartData] = useState<{name: string, visitors: number}[]>([]);
+  const [dynamicChartData, setDynamicChartData] = useState<{name: string, visitors: number, pageViews: number}[]>([]);
 
   useEffect(() => {
     if (activeTab === 'dashboard') {
       const data = [];
-      let current = Math.floor((viewCount || 1000) / 30);
+      let currentVisits = Math.floor((viewCount || 1000) / 30);
       for (let i = 23; i >= 0; i--) {
         const d = new Date();
         d.setHours(d.getHours() - i);
-        current += Math.floor(Math.random() * 20) - 8;
+        currentVisits += Math.floor(Math.random() * 16) - 7;
+        const v = Math.max(15, currentVisits);
+        const pv = Math.floor(v * (1.6 + Math.random() * 0.5));
         data.push({
-          name: d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
-          visitors: Math.max(10, current)
+          name: d.toLocaleTimeString('en-US', { hour: 'numeric' }),
+          visitors: v,
+          pageViews: pv
         });
       }
       setDynamicChartData(data);
@@ -559,11 +591,11 @@ export default function AdminDashboard({ session }: { session: any }) {
         setDynamicChartData(prev => {
           if (prev.length === 0) return prev;
           const newData = [...prev];
-          const last = newData[newData.length - 1];
-          newData[newData.length - 1] = {
-            ...last,
-            visitors: last.visitors + Math.floor(Math.random() * 5)
-          };
+          const last = { ...newData[newData.length - 1] };
+          const addV = Math.floor(Math.random() * 4);
+          last.visitors += addV;
+          last.pageViews += Math.floor(addV * 2 + Math.random() * 2);
+          newData[newData.length - 1] = last;
           return newData;
         });
         setViewCount(prev => prev + Math.floor(Math.random() * 3));
@@ -571,6 +603,16 @@ export default function AdminDashboard({ session }: { session: any }) {
       return () => clearInterval(interval);
     }
   }, [activeTab]);
+
+  const maxVisits = useMemo(() => {
+    if (!dynamicChartData.length) return 0;
+    return Math.max(...dynamicChartData.map(d => d.visitors));
+  }, [dynamicChartData]);
+
+  const totalPageViews = useMemo(() => {
+    if (!dynamicChartData.length) return 0;
+    return dynamicChartData.reduce((sum, d) => sum + d.pageViews, 0);
+  }, [dynamicChartData]);
 
   const [stats, setStats] = useState({
     portfolio: 0,
@@ -689,17 +731,20 @@ export default function AdminDashboard({ session }: { session: any }) {
   }, [activeTab]);
 
   const renderDashboard = () => {
-    const COLORS = ['#3b82f6', '#10b981', '#6366f1', '#f59e0b', '#ec4899', '#8b5cf6'];
+    const COLORS = ['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#ec4899', '#06b6d4'];
+    
     const pieData = [
       { name: 'Projects', value: stats.portfolio },
-      { name: 'Works', value: stats.experiences },
-      { name: 'Milestones', value: stats.achievements },
+      { name: 'Experience', value: stats.experiences },
+      { name: 'Achievements', value: stats.achievements },
       { name: 'Blogs', value: stats.blogs },
     ].filter(d => d.value > 0);
 
+    const totalContentItems = pieData.reduce((acc, curr) => acc + curr.value, 0);
+
     const barData = [
-      { name: 'Msgs', value: stats.messages },
-      { name: 'Reviews', value: stats.reviews },
+      { name: 'Messages', value: stats.messages, fill: '#10b981' },
+      { name: 'Reviews', value: stats.reviews, fill: '#f59e0b' },
     ];
 
     const getTimeAgo = (dateStr: string) => {
@@ -715,99 +760,184 @@ export default function AdminDashboard({ session }: { session: any }) {
       return `${diffDays}d ago`;
     };
 
+    const CustomTooltip = ({ active, payload, label }: any) => {
+      if (active && payload && payload.length) {
+        return (
+          <div className="bg-slate-900/95 border border-slate-700/60 rounded-xl p-3 shadow-2xl backdrop-blur-xl text-xs space-y-2">
+            <div className="flex items-center justify-between border-b border-white/10 pb-1.5 gap-4">
+              <span className="text-slate-400 font-semibold">{label}</span>
+              <span className="text-[10px] font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full">● Live</span>
+            </div>
+            {payload.map((entry: any, index: number) => (
+              <div key={`item-${index}`} className="flex items-center justify-between gap-6">
+                <div className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: entry.color }}></span>
+                  <span className="text-slate-300 font-medium">{entry.name}:</span>
+                </div>
+                <span className="font-bold text-white font-mono">{entry.value.toLocaleString()}</span>
+              </div>
+            ))}
+          </div>
+        );
+      }
+      return null;
+    };
+
     return (
       <div className="space-y-6">
         {/* Metric Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {[
-            { label: 'Site Traffic', value: viewCount.toLocaleString(), trend: '+12.5%', icon: <Eye className="text-blue-400" />, color: 'blue' },
-            { label: 'Engagement', value: stats.totalLikes.toLocaleString(), trend: 'Growing', icon: <Heart className="text-red-400" />, color: 'red' },
-            { label: 'Messages', value: stats.messages, trend: '+3', icon: <Mail className="text-emerald-400" />, color: 'emerald' },
-            { label: 'Showcase Items', value: stats.portfolio, trend: 'Active', icon: <Briefcase className="text-indigo-400" />, color: 'indigo' },
+            { label: 'Total Views', value: viewCount.toLocaleString(), trend: '+14.2%', icon: <Eye className="text-blue-400" />, color: 'blue', subtext: 'Lifetime visits' },
+            { label: 'Total Likes', value: stats.totalLikes.toLocaleString(), trend: '+8.4%', icon: <Heart className="text-pink-400" />, color: 'pink', subtext: 'User engagement' },
+            { label: 'Inquiries', value: stats.messages.toLocaleString(), trend: `${stats.messages} new`, icon: <Mail className="text-emerald-400" />, color: 'emerald', subtext: 'Direct messages' },
+            { label: 'Portfolio Items', value: stats.portfolio.toLocaleString(), trend: 'Active', icon: <Briefcase className="text-purple-400" />, color: 'purple', subtext: 'Published projects' },
           ].map((kpi, i) => (
             <motion.div 
               key={kpi.label}
-              initial={{ opacity: 0, y: 20 }}
+              initial={{ opacity: 0, y: 15 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.1 }}
-              className="bg-slate-800/40 backdrop-blur-xl border border-white/5 rounded-2xl p-5 hover:border-white/10 transition-all duration-300 group"
+              transition={{ delay: i * 0.08 }}
+              className="bg-slate-800/50 backdrop-blur-xl border border-white/10 rounded-2xl p-5 hover:border-blue-500/30 hover:shadow-lg hover:shadow-blue-500/5 transition-all duration-300 group"
             >
-              <div className="flex justify-between items-start mb-4">
-                <div className={`p-2.5 rounded-xl bg-${kpi.color}-500/10 group-hover:scale-110 transition-transform duration-300`}>
+              <div className="flex justify-between items-start mb-3">
+                <div className="p-2.5 rounded-xl bg-slate-900/60 border border-white/5 group-hover:scale-110 transition-transform duration-300">
                   {kpi.icon}
                 </div>
-                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${kpi.color === 'blue' || kpi.color === 'emerald' ? 'bg-emerald-500/10 text-emerald-400' : 'bg-blue-500/10 text-blue-400'}`}>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
                   {kpi.trend}
                 </span>
               </div>
-              <p className="text-xs font-medium text-slate-400 uppercase tracking-widest">{kpi.label}</p>
-              <h3 className="text-2xl font-bold text-white tracking-tighter mt-1">{kpi.value}</h3>
+              <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">{kpi.label}</p>
+              <h3 className="text-2xl font-black text-white tracking-tight mt-0.5">{kpi.value}</h3>
+              <p className="text-[10px] text-slate-500 mt-1">{kpi.subtext}</p>
             </motion.div>
           ))}
         </div>
 
-        {/* Main Charts & Activity Feed */}
+        {/* Main Detailed Traffic Chart & Recent Activity */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <motion.div 
-            initial={{ opacity: 0, scale: 0.98 }}
+            initial={{ opacity: 0, scale: 0.99 }}
             animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.4 }}
-            className="lg:col-span-2 bg-slate-800/40 backdrop-blur-xl border border-white/5 rounded-3xl p-6 lg:p-8 flex flex-col min-h-[420px]"
+            transition={{ delay: 0.3 }}
+            className="lg:col-span-2 bg-slate-800/50 backdrop-blur-xl border border-white/10 rounded-2xl p-5 lg:p-6 flex flex-col justify-between"
           >
-            <div className="flex justify-between items-center mb-8">
+            {/* Header with Stats & Filter Toggle */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5 border-b border-white/5 pb-4">
               <div>
-                <h4 className="text-lg font-bold text-white tracking-tight flex items-center gap-2">
-                  Visitor Velocity
-                </h4>
-                <p className="text-xs text-slate-500 font-medium tracking-wide mt-1">Real-time traffic patterns over 24h</p>
+                <div className="flex items-center gap-2">
+                  <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></div>
+                  <h4 className="text-base font-bold text-white tracking-tight">24h Traffic & Engagement Stream</h4>
+                </div>
+                <p className="text-xs text-slate-400 mt-0.5">Real-time visitor velocity and pageview metrics</p>
               </div>
-              <div className="flex bg-slate-900/50 rounded-full p-1 border border-white/5">
-                <button className="px-3 py-1 text-[10px] font-bold text-blue-400 bg-blue-500/10 rounded-full">LIVE</button>
-                <button className="px-3 py-1 text-[10px] font-bold text-slate-500 hover:text-slate-300">24H</button>
+
+              {/* Quick Summary Pill Badges */}
+              <div className="flex items-center gap-3 text-[11px] font-medium bg-slate-900/70 p-1.5 rounded-xl border border-white/5">
+                <div className="flex items-center gap-1.5 px-2">
+                  <span className="w-2 h-2 rounded-full bg-blue-500"></span>
+                  <span className="text-slate-400">Peak:</span>
+                  <span className="font-bold text-white">{maxVisits}/h</span>
+                </div>
+                <div className="w-px h-3 bg-white/10"></div>
+                <div className="flex items-center gap-1.5 px-2">
+                  <span className="w-2 h-2 rounded-full bg-purple-500"></span>
+                  <span className="text-slate-400">24h Views:</span>
+                  <span className="font-bold text-white">{totalPageViews.toLocaleString()}</span>
+                </div>
               </div>
             </div>
-            <div className="flex-1 w-full mt-4">
+
+            {/* Recharts Area Chart Container */}
+            <div className="w-full h-[250px] min-h-[250px]">
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={dynamicChartData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
+                <AreaChart data={dynamicChartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                   <defs>
                     <linearGradient id="colorVisits" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.4}/>
-                      <stop offset="95%" stopColor="#3b82f6" stopOpacity={0}/>
+                      <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.45}/>
+                      <stop offset="95%" stopColor="#3b82f6" stopOpacity={0.02}/>
+                    </linearGradient>
+                    <linearGradient id="colorViews" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.35}/>
+                      <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0.01}/>
                     </linearGradient>
                   </defs>
-                  <Tooltip 
-                    contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #ffffff10', borderRadius: '16px', fontSize: '11px', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.5)' }}
-                    itemStyle={{ color: '#3b82f6', fontWeight: 'bold' }}
-                    labelStyle={{ opacity: 0.5, marginBottom: '4px' }}
-                    cursor={{ stroke: '#3b82f6', strokeWidth: 1, strokeDasharray: '4 4' }}
+                  <CartesianGrid strokeDasharray="3 3" stroke="#334155" opacity={0.3} vertical={false} />
+                  <XAxis dataKey="name" stroke="#64748b" fontSize={10} tickLine={false} axisLine={{ stroke: '#334155' }} interval={3} />
+                  <YAxis stroke="#64748b" fontSize={10} tickLine={false} axisLine={false} />
+                  <Tooltip content={<CustomTooltip />} />
+                  <Area 
+                    type="monotone" 
+                    dataKey="pageViews" 
+                    name="Pageviews" 
+                    stroke="#8b5cf6" 
+                    strokeWidth={2} 
+                    fillOpacity={1} 
+                    fill="url(#colorViews)" 
+                    dot={false} 
+                    activeDot={{ r: 5, fill: '#8b5cf6', stroke: '#fff', strokeWidth: 2 }} 
                   />
-                  <Area type="monotone" dataKey="visitors" stroke="#3b82f6" strokeWidth={4} fillOpacity={1} fill="url(#colorVisits)" dot={false} activeDot={{ r: 6, fill: '#3b82f6', stroke: '#fff', strokeWidth: 2 }} />
+                  <Area 
+                    type="monotone" 
+                    dataKey="visitors" 
+                    name="Visitors" 
+                    stroke="#3b82f6" 
+                    strokeWidth={2.5} 
+                    fillOpacity={1} 
+                    fill="url(#colorVisits)" 
+                    dot={false} 
+                    activeDot={{ r: 6, fill: '#3b82f6', stroke: '#fff', strokeWidth: 2 }} 
+                  />
                 </AreaChart>
               </ResponsiveContainer>
             </div>
+
+            {/* Bottom Chart Footer Legend */}
+            <div className="flex items-center justify-between text-[11px] text-slate-400 pt-3 border-t border-white/5 mt-2">
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-1.5">
+                  <span className="w-2.5 h-2.5 rounded-full bg-blue-500"></span>
+                  <span>Unique Visitors</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="w-2.5 h-2.5 rounded-full bg-purple-500"></span>
+                  <span>Total Pageviews</span>
+                </div>
+              </div>
+              <span className="text-[10px] text-slate-500 font-mono">Updated live every 5s</span>
+            </div>
           </motion.div>
 
+          {/* Activity Timeline Card */}
           <motion.div 
-            initial={{ opacity: 0, x: 20 }}
+            initial={{ opacity: 0, x: 15 }}
             animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: 0.5 }}
-            className="bg-slate-800/40 backdrop-blur-xl border border-white/5 rounded-3xl p-6 lg:p-8 flex flex-col"
+            transition={{ delay: 0.4 }}
+            className="bg-slate-800/50 backdrop-blur-xl border border-white/10 rounded-2xl p-5 lg:p-6 flex flex-col"
           >
-            <h4 className="text-lg font-bold text-white tracking-tight mb-6">Recent Activity</h4>
-            <div className="space-y-6 flex-1">
+            <div className="flex items-center justify-between mb-4 pb-3 border-b border-white/5">
+              <h4 className="text-sm font-bold text-white tracking-tight flex items-center gap-2">
+                <BarChart3 size={16} className="text-blue-400" />
+                <span>Recent Updates</span>
+              </h4>
+              <span className="text-[10px] font-bold text-slate-400 bg-slate-900 px-2 py-0.5 rounded-md border border-white/5">Live Stream</span>
+            </div>
+
+            <div className="space-y-4 flex-1 overflow-y-auto max-h-[300px] pr-1 custom-scrollbar">
               {realtimeActivity.length === 0 ? (
-                <div className="flex flex-col items-center justify-center h-full text-slate-500 gap-2">
-                  <div className="w-8 h-8 rounded-full border-2 border-slate-700 border-t-blue-500 animate-spin"></div>
-                  <span className="text-xs uppercase font-black tracking-widest">Listening...</span>
+                <div className="flex flex-col items-center justify-center h-48 text-slate-500 gap-2">
+                  <div className="w-6 h-6 rounded-full border-2 border-slate-700 border-t-blue-500 animate-spin"></div>
+                  <span className="text-[11px] font-mono">Fetching activity...</span>
                 </div>
               ) : realtimeActivity.map((activity) => (
-                <div key={activity.id} className="relative pl-8 before:absolute before:left-[11px] before:top-8 before:bottom-[-24px] before:w-[2px] before:bg-white/5 last:before:hidden">
-                  <div className="absolute left-0 top-0 w-6 h-6 rounded-lg bg-white/5 border border-white/10 flex items-center justify-center z-10 hover:border-blue-500/50 transition-colors">
+                <div key={activity.id} className="relative pl-7 before:absolute before:left-[9px] before:top-6 before:bottom-[-16px] before:w-[1px] before:bg-slate-700/50 last:before:hidden">
+                  <div className="absolute left-0 top-0.5 w-5 h-5 rounded-md bg-slate-900 border border-white/10 flex items-center justify-center z-10">
                     {activity.icon}
                   </div>
-                  <div>
-                    <p className="text-sm text-slate-300 font-medium mb-1 line-clamp-1">{activity.text}</p>
-                    <span className="text-[10px] text-slate-500 uppercase tracking-widest font-bold">{getTimeAgo(activity.created_at)}</span>
+                  <div className="bg-slate-900/40 p-2.5 rounded-xl border border-white/5 hover:border-blue-500/30 transition-colors">
+                    <p className="text-xs text-slate-200 font-medium line-clamp-1">{activity.text}</p>
+                    <span className="text-[10px] text-slate-500 font-mono mt-0.5 block">{getTimeAgo(activity.created_at)}</span>
                   </div>
                 </div>
               ))}
@@ -815,78 +945,117 @@ export default function AdminDashboard({ session }: { session: any }) {
           </motion.div>
         </div>
 
-        {/* Bottom Stats Row */}
+        {/* Bottom Analytics & Breakdown Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {/* Donut Content Breakdown Chart */}
           <motion.div 
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 15 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.6 }}
-            className="bg-slate-800/40 border border-white/5 rounded-3xl p-6 shadow-xl flex items-center gap-6"
+            transition={{ delay: 0.5 }}
+            className="bg-slate-800/50 border border-white/10 rounded-2xl p-5 shadow-xl flex flex-col justify-between"
           >
-            <div className="w-1/2 h-full min-h-[140px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={pieData}
-                    innerRadius={45}
-                    outerRadius={65}
-                    paddingAngle={10}
-                    dataKey="value"
-                    stroke="none"
-                  >
-                    {pieData.map((_entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip contentStyle={{ display: 'none' }} />
-                </PieChart>
-              </ResponsiveContainer>
+            <div className="flex items-center justify-between mb-2">
+              <h5 className="text-xs font-bold text-slate-300 uppercase tracking-wider">Content Distribution</h5>
+              <span className="text-[11px] font-bold text-blue-400 bg-blue-500/10 px-2 py-0.5 rounded-md">{totalContentItems} Items</span>
             </div>
-            <div className="w-1/2 space-y-3">
-              <h5 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2">Content Map</h5>
-              {pieData.map((item, index) => (
-                <div key={item.name} className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: COLORS[index % COLORS.length] }}></div>
-                    <span className="text-[10px] font-bold text-slate-400 uppercase">{item.name}</span>
-                  </div>
-                  <span className="text-xs font-black text-white">{item.value}</span>
+
+            <div className="flex items-center gap-4 py-2">
+              <div className="w-1/2 h-[130px] min-h-[130px] relative flex items-center justify-center">
+                <ResponsiveContainer width="100%" height="100%">
+                  <PieChart>
+                    <Pie
+                      data={pieData}
+                      innerRadius={42}
+                      outerRadius={58}
+                      paddingAngle={8}
+                      dataKey="value"
+                      stroke="none"
+                    >
+                      {pieData.map((_entry, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Pie>
+                  </PieChart>
+                </ResponsiveContainer>
+                <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none text-center">
+                  <span className="text-lg font-black text-white">{totalContentItems}</span>
+                  <span className="text-[9px] text-slate-400 uppercase font-bold">Total</span>
                 </div>
-              ))}
+              </div>
+
+              <div className="w-1/2 space-y-2">
+                {pieData.map((item, index) => {
+                  const pct = totalContentItems > 0 ? Math.round((item.value / totalContentItems) * 100) : 0;
+                  return (
+                    <div key={item.name} className="space-y-0.5">
+                      <div className="flex items-center justify-between text-[11px]">
+                        <div className="flex items-center gap-1.5">
+                          <span className="w-2 h-2 rounded-full" style={{ backgroundColor: COLORS[index % COLORS.length] }}></span>
+                          <span className="text-slate-300 font-medium">{item.name}</span>
+                        </div>
+                        <span className="font-bold text-white font-mono">{item.value} <span className="text-[9px] text-slate-500">({pct}%)</span></span>
+                      </div>
+                      <div className="w-full bg-slate-900 rounded-full h-1 overflow-hidden">
+                        <div className="h-full rounded-full transition-all duration-500" style={{ width: `${pct}%`, backgroundColor: COLORS[index % COLORS.length] }}></div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           </motion.div>
 
+          {/* Inbound Communications & Ratings */}
           <motion.div 
-             initial={{ opacity: 0, y: 20 }}
+             initial={{ opacity: 0, y: 15 }}
              animate={{ opacity: 1, y: 0 }}
-             transition={{ delay: 0.7 }}
-             className="lg:col-span-2 bg-slate-800/40 border border-white/5 rounded-3xl p-6 shadow-xl flex flex-col"
+             transition={{ delay: 0.6 }}
+             className="lg:col-span-2 bg-slate-800/50 border border-white/10 rounded-2xl p-5 shadow-xl flex flex-col justify-between"
           >
-             <div className="flex justify-between items-center mb-6">
-               <h5 className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Inbound Performance</h5>
-               <div className="flex gap-4">
-                 <div className="flex items-center gap-2">
-                   <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
-                   <span className="text-[10px] font-bold text-slate-400 uppercase">Messages</span>
+             <div className="flex items-center justify-between mb-4">
+               <div>
+                 <h5 className="text-xs font-bold text-slate-300 uppercase tracking-wider">Inbound Engagement & Messaging</h5>
+                 <p className="text-[11px] text-slate-400 mt-0.5">Client inquiries and feedback comparison</p>
+               </div>
+               <div className="flex gap-3 text-[11px]">
+                 <div className="flex items-center gap-1.5">
+                   <span className="w-2.5 h-2.5 rounded-md bg-emerald-500"></span>
+                   <span className="text-slate-300">Messages ({stats.messages})</span>
                  </div>
-                 <div className="flex items-center gap-2">
-                   <div className="w-2 h-2 rounded-full bg-amber-500"></div>
-                   <span className="text-[10px] font-bold text-slate-400 uppercase">Reviews</span>
+                 <div className="flex items-center gap-1.5">
+                   <span className="w-2.5 h-2.5 rounded-md bg-amber-500"></span>
+                   <span className="text-slate-300">Reviews ({stats.reviews})</span>
                  </div>
                </div>
              </div>
-             <div className="flex-1 w-full min-h-[100px]">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={barData} layout="vertical" margin={{ left: -30 }}>
-                    <XAxis type="number" hide />
-                    <YAxis dataKey="name" type="category" stroke="#94a3b8" fontSize={9} axisLine={false} tickLine={false} />
-                    <Bar dataKey="value" radius={[0, 10, 10, 0]} barSize={12}>
-                      {barData.map((_entry, index) => (
-                        <Cell key={`bar-${index}`} fill={index === 0 ? '#10b981' : '#f59e0b'} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
+
+             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-center">
+               <div className="w-full h-[100px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={barData} layout="vertical" margin={{ left: -10, right: 10 }}>
+                      <XAxis type="number" hide />
+                      <YAxis dataKey="name" type="category" stroke="#94a3b8" fontSize={11} axisLine={false} tickLine={false} />
+                      <Bar dataKey="value" radius={[0, 8, 8, 0]} barSize={16}>
+                        {barData.map((entry, index) => (
+                          <Cell key={`bar-${index}`} fill={entry.fill} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+               </div>
+
+               <div className="bg-slate-900/60 rounded-xl p-3 border border-white/5 grid grid-cols-2 gap-3 text-center">
+                 <div className="border-r border-white/5 pr-2">
+                   <span className="text-[10px] text-slate-400 uppercase font-bold block">Avg Rating</span>
+                   <span className="text-lg font-black text-amber-400 flex items-center justify-center gap-1 mt-0.5">
+                     5.0 <span className="text-xs">★</span>
+                   </span>
+                 </div>
+                 <div>
+                   <span className="text-[10px] text-slate-400 uppercase font-bold block">Response Rate</span>
+                   <span className="text-lg font-black text-emerald-400 mt-0.5 block">100%</span>
+                 </div>
+               </div>
              </div>
           </motion.div>
         </div>

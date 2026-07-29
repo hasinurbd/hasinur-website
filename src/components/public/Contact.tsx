@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Mail, Phone, MapPin, Send, MessageSquare, Heart, Share2, Facebook, Instagram, Linkedin, Twitter, Youtube } from 'lucide-react';
+import { Mail, Phone, MapPin, Send, MessageSquare, Heart, Share2, Facebook, Instagram, Linkedin, Twitter, Youtube, UserPlus, Download } from 'lucide-react';
 import { getMockProfile } from '../../lib/mockData';
 import { supabase, hasSupabaseConfig } from '../../lib/supabaseClient';
 import { FloatingIcon, BackgroundBlobs } from './VisualElements';
@@ -72,6 +72,38 @@ export default function Contact() {
       fetchProfile();
     }
   }, []);
+
+  const handleSaveContact = () => {
+    const name = profile.name || "S M Hasinur Rahman";
+    const title = profile.title || "Full-Stack Developer & Designer";
+    const email = profile.email || "hasinurrahman.me@gmail.com";
+    const phone = profile.phone || "+8801647706099";
+    const location = profile.location || "Dhaka, Bangladesh";
+    const website = window.location.origin;
+
+    const vCardData = [
+      'BEGIN:VCARD',
+      'VERSION:3.0',
+      `N:${name.split(' ').reverse().join(';')};;;`,
+      `FN:${name}`,
+      `TITLE:${title}`,
+      `TEL;TYPE=CELL,VOICE:${phone}`,
+      `EMAIL;TYPE=WORK,INTERNET:${email}`,
+      `ADR;TYPE=WORK:;;${location};;;;`,
+      `URL:${website}`,
+      'END:VCARD'
+    ].join('\r\n');
+
+    const blob = new Blob([vCardData], { type: 'text/vcard;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `${name.replace(/\s+/g, '_')}_Contact.vcf`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -158,6 +190,25 @@ export default function Contact() {
                   </div>
                 </div>
               )}
+
+              {/* Save Contact Button */}
+              <div className="pt-2">
+                <motion.button
+                  whileHover={{ scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={handleSaveContact}
+                  id="save-contact-vcard-btn"
+                  className="w-full sm:w-auto flex items-center gap-4 bg-slate-900/60 hover:bg-slate-900/90 border border-blue-500/20 hover:border-blue-500/50 p-3 pr-6 rounded-2xl transition-all duration-300 shadow-lg group cursor-pointer text-left"
+                >
+                  <div className="w-12 h-12 rounded-xl bg-blue-500/10 border border-blue-500/20 group-hover:bg-blue-500/20 group-hover:border-blue-500/40 flex items-center justify-center text-blue-400 flex-shrink-0 transition-colors">
+                    <UserPlus size={20} className="group-hover:scale-110 transition-transform" />
+                  </div>
+                  <div className="text-lg text-white font-bold group-hover:text-blue-400 transition-colors flex items-center gap-2">
+                    <span>Save Contact</span>
+                    <Download size={16} className="text-blue-400 group-hover:translate-y-0.5 transition-transform" />
+                  </div>
+                </motion.button>
+              </div>
             </div>
 
             <div className="pt-4">
