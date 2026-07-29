@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Mail, Phone, MapPin, Send, MessageSquare, Heart, Share2, Facebook, Instagram, Linkedin, Twitter, Youtube, UserPlus, Download } from 'lucide-react';
 import { getMockProfile } from '../../lib/mockData';
 import { supabase, hasSupabaseConfig } from '../../lib/supabaseClient';
+import { getViewStats } from '../../lib/viewTracker';
 import { FloatingIcon, BackgroundBlobs } from './VisualElements';
 import { motion } from 'motion/react';
 
@@ -33,28 +34,18 @@ export default function Contact() {
   const [profile, setProfile] = useState(getMockProfile());
   const [formData, setFormData] = useState({ name: '', email: '', message: '' });
   const [status, setStatus] = useState<'' | 'sending' | 'success' | 'error'>('');
-  const [viewCount, setViewCount] = useState(100000);
+  const [viewCount, setViewCount] = useState(12480);
 
   useEffect(() => {
     const fetchViews = async () => {
-      if (hasSupabaseConfig) {
-        const { data, error } = await supabase
-          .from('site_stats')
-          .select('views')
-          .eq('id', 'global')
-          .single();
-        
-        if (data && !error) {
-          const displayViews = Math.max(100000, data.views);
-          setViewCount(displayViews);
-        }
-      } else {
-        const saved = localStorage.getItem('mockViews');
-        const current = saved ? parseInt(saved) : 100000;
-        setViewCount(current);
-      }
+      const stats = await getViewStats();
+      setViewCount(stats.totalViews);
     };
     fetchViews();
+
+    const handlePageView = () => fetchViews();
+    window.addEventListener('page_view_recorded', handlePageView);
+    return () => window.removeEventListener('page_view_recorded', handlePageView);
   }, []);
 
   useEffect(() => {

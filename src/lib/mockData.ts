@@ -283,20 +283,5 @@ export const mockClients = [
   }
 ];
 
-export const mockMessages = [
-  {
-    id: '1',
-    name: 'Alex Johnson',
-    email: 'alex.j@example.com',
-    message: 'Hi Hasinur, I love your design portfolio! We are looking for a lead UI/UX designer for our mobile app project.',
-    created_at: new Date(Date.now() - 1000 * 60 * 30).toISOString()
-  },
-  {
-    id: '2',
-    name: 'Sophia Williams',
-    email: 'sophia@techinnovations.io',
-    message: 'Hello, interested in booking a full brand redesign consultation. Please let me know your availability for next week.',
-    created_at: new Date(Date.now() - 1000 * 60 * 120).toISOString()
-  }
-];
+export const mockMessages = [];
 

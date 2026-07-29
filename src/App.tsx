@@ -3,10 +3,23 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { Suspense, lazy } from "react";
+import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
+import { Suspense, lazy, useEffect } from "react";
 import Home from "./pages/Home";
 import { ProfileProvider } from "./lib/ProfileContext";
+import { recordPageView } from "./lib/viewTracker";
+
+function PageTracker() {
+  const location = useLocation();
+
+  useEffect(() => {
+    if (!location.pathname.startsWith('/admin')) {
+      recordPageView();
+    }
+  }, [location.pathname]);
+
+  return null;
+}
 
 // Lazy-loaded components for optimal initial payload & dynamic chunking
 const Admin = lazy(() => import("./pages/Admin"));
@@ -33,6 +46,7 @@ export default function App() {
   return (
     <ProfileProvider>
       <BrowserRouter>
+        <PageTracker />
         <Suspense fallback={<PageLoader />}>
           <Routes>
             <Route path="/admin/*" element={<Admin />} />

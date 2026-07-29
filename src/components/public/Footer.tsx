@@ -2,9 +2,10 @@ import React, { useState, useEffect } from 'react';
 import { supabase, hasSupabaseConfig } from '../../lib/supabaseClient';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useProfile } from '../../lib/ProfileContext';
+import { getViewStats } from '../../lib/viewTracker';
 
 export default function Footer() {
-  const [viewCount, setViewCount] = useState(100000);
+  const [viewCount, setViewCount] = useState(12480);
   const { profile } = useProfile();
   const navigate = useNavigate();
   const location = useLocation();
@@ -12,25 +13,15 @@ export default function Footer() {
 
   useEffect(() => {
     const fetchViews = async () => {
-      if (hasSupabaseConfig) {
-        const { data, error } = await supabase
-          .from('site_stats')
-          .select('views')
-          .eq('id', 'global')
-          .single();
-        
-        if (data && !error) {
-          const displayViews = Math.max(100000, data.views);
-          setViewCount(displayViews);
-        }
-      } else {
-        const saved = localStorage.getItem('mockViews');
-        const current = saved ? parseInt(saved) : 100000;
-        setViewCount(current);
-      }
+      const stats = await getViewStats();
+      setViewCount(stats.totalViews);
     };
 
     fetchViews();
+
+    const handlePageView = () => fetchViews();
+    window.addEventListener('page_view_recorded', handlePageView);
+    return () => window.removeEventListener('page_view_recorded', handlePageView);
   }, []);
 
   const handleNavClick = (e: React.MouseEvent<HTMLAnchorElement>, href: string) => {
