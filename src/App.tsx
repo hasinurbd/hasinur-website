@@ -13,7 +13,7 @@ function PageTracker() {
   const location = useLocation();
 
   useEffect(() => {
-    if (!location.pathname.startsWith('/admin')) {
+    if (location.pathname === '/' || location.pathname === '') {
       recordPageView();
     }
   }, [location.pathname]);
