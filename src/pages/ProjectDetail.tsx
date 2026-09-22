@@ -121,6 +121,7 @@ export default function ProjectDetail() {
         category: project.category,
         contentHtml: project.description,
         imageUrl: project.image_url || (project.gallery && project.gallery[0]),
+        gallery: project.gallery || (project.image_url ? [project.image_url] : []),
         likes: likes,
         comments: comments
       });

@@ -112,6 +112,7 @@ export default function BlogDetail() {
         date: blog.published_at ? new Date(blog.published_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : '',
         contentHtml: blog.content,
         imageUrl: blog.image_url || (blog.gallery && blog.gallery[0]),
+        gallery: blog.gallery || (blog.image_url ? [blog.image_url] : []),
         likes: likes,
         comments: comments
       });

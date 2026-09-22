@@ -113,6 +113,7 @@ export default function AchievementDetail() {
         author: achievement.author ? `Issued by ${achievement.author}` : undefined,
         contentHtml: achievement.description,
         imageUrl: achievement.image_url || (achievement.gallery && achievement.gallery[0]),
+        gallery: achievement.gallery || (achievement.image_url ? [achievement.image_url] : []),
         likes: likes,
         comments: comments
       });
