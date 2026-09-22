@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
-import { FileText, Calendar, Clock, ArrowLeft, Send, MessageSquare, ChevronLeft, ChevronRight, Heart, Share2, FileDown } from 'lucide-react';
+import { FileText, Calendar, Clock, ArrowLeft, Send, MessageSquare, ChevronLeft, ChevronRight, Heart, Share2, FileDown, Link2, Check } from 'lucide-react';
 import { supabase, hasSupabaseConfig } from '../lib/supabaseClient';
 import { getMockData, mockBlogs } from '../lib/mockData';
-import { sanitizeHtml, useDocumentMetadata } from '../lib/utils';
+import { sanitizeHtml, useDocumentMetadata, calculateReadingTime } from '../lib/utils';
+import { downloadPDF } from '../lib/pdfGenerator';
 import Navbar from '../components/public/Navbar';
 import Footer from '../components/public/Footer';
+import ScrollProgressBar from '../components/public/ScrollProgressBar';
 
 export default function BlogDetail() {
   const { id } = useParams();
@@ -19,6 +21,8 @@ export default function BlogDetail() {
   // Interaction states
   const [likes, setLikes] = useState(0);
   const [isLiked, setIsLiked] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
   const [comments, setComments] = useState<any[]>([]);
   const [commentName, setCommentName] = useState('');
   const [commentText, setCommentText] = useState('');
@@ -84,20 +88,38 @@ export default function BlogDetail() {
         await navigator.share({ title: blog.title, text: 'Check out this article', url: window.location.href });
       } catch (e) { console.log('Share aborted'); }
     } else {
-      navigator.clipboard.writeText(window.location.href);
-      alert('Link copied!');
+      handleCopyLink();
     }
   };
 
-  const handleDownloadPDF = () => {
-    if (window.self !== window.top) {
-      const confirmOpen = window.confirm("Printing works best in a new tab. Would you like to open this blog in a new tab to download the PDF?");
-      if (confirmOpen) {
-        window.open(window.location.href, '_blank');
-        return;
-      }
+  const handleCopyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2500);
+    } catch (err) {
+      console.error('Copy link error:', err);
     }
-    window.print();
+  };
+
+  const handleDownloadPDF = async () => {
+    if (isDownloadingPdf || !blog) return;
+    setIsDownloadingPdf(true);
+    try {
+      await downloadPDF('blog-printable-content', blog.title || 'article', {
+        title: blog.title,
+        category: 'Tech & Design Article',
+        date: blog.published_at ? new Date(blog.published_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : '',
+        contentHtml: blog.content,
+        imageUrl: blog.image_url || (blog.gallery && blog.gallery[0]),
+        likes: likes,
+        comments: comments
+      });
+    } catch (err) {
+      console.error('Download PDF error:', err);
+    } finally {
+      setIsDownloadingPdf(false);
+    }
   };
 
   const handleCommentSubmit = async (e: React.FormEvent) => {
@@ -159,6 +181,7 @@ export default function BlogDetail() {
 
   return (
     <div className="min-h-screen bg-slate-950 text-white font-sans">
+      <ScrollProgressBar />
       <Navbar />
       
       <main className="pt-24 pb-20 px-4 md:px-6 max-w-5xl mx-auto">
@@ -167,8 +190,9 @@ export default function BlogDetail() {
           <span className="font-black uppercase tracking-widest text-xs">Back to Articles</span>
         </Link>
 
-        {/* Hero Section */}
-        <div className="mb-12 space-y-6">
+        <div id="blog-printable-content" className="p-4 rounded-3xl bg-slate-950">
+          {/* Hero Section */}
+          <div className="mb-12 space-y-6">
           <div className="inline-flex items-center gap-2 px-3 py-1 bg-indigo-500/10 border border-indigo-500/20 rounded-full text-indigo-400 text-[10px] font-black uppercase tracking-widest">
             <FileText size={12} />
             Tech & Design Article
@@ -184,7 +208,7 @@ export default function BlogDetail() {
             </div>
             <div className="flex items-center gap-2">
               <Clock size={14} className="text-blue-500" />
-              5 min read
+              {calculateReadingTime(blog.content)}
             </div>
           </div>
         </div>
@@ -242,6 +266,7 @@ export default function BlogDetail() {
         >
           <div dangerouslySetInnerHTML={{ __html: sanitizeHtml(blog.content) }} />
         </article>
+        </div>
 
         {/* Interaction Bar */}
         <div className="mt-12 flex items-center gap-2 py-4 border-y border-white/5 print:hidden">
@@ -264,9 +289,32 @@ export default function BlogDetail() {
 
           <div className="flex-grow"></div>
 
-          <div className="flex gap-2">
-             <button onClick={handleShare} className="p-4 bg-slate-800 hover:bg-slate-700 text-white rounded-2xl transition-all"><Share2 size={20} /></button>
-             <button onClick={handleDownloadPDF} className="p-4 bg-slate-800 hover:bg-slate-700 text-white rounded-2xl transition-all"><FileDown size={20} /></button>
+          <div className="flex gap-2 items-center">
+             <button 
+               onClick={handleCopyLink} 
+               className={`flex items-center gap-2 px-4 py-3.5 rounded-2xl font-bold text-xs transition-all ${
+                 copied 
+                   ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 shadow-lg shadow-emerald-500/10' 
+                   : 'bg-slate-800 hover:bg-slate-700 text-white'
+               }`}
+               title="Copy direct URL to clipboard"
+             >
+               {copied ? <Check size={18} className="text-emerald-400" /> : <Link2 size={18} />}
+               <span className="font-bold text-xs">{copied ? 'Copied!' : 'Copy Link'}</span>
+             </button>
+             <button onClick={handleShare} className="p-4 bg-slate-800 hover:bg-slate-700 text-white rounded-2xl transition-all" title="Share Article"><Share2 size={20} /></button>
+             <button 
+               onClick={handleDownloadPDF} 
+               disabled={isDownloadingPdf}
+               className="p-4 bg-slate-800 hover:bg-slate-700 disabled:opacity-50 text-white rounded-2xl transition-all flex items-center gap-2" 
+               title="Download as PDF document"
+             >
+               {isDownloadingPdf ? (
+                 <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+               ) : (
+                 <FileDown size={20} />
+               )}
+             </button>
           </div>
         </div>
 

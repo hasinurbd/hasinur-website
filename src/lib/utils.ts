@@ -76,6 +76,14 @@ export function sanitizeHtml(html: string | undefined | null): string {
   return sanitized;
 }
 
+export function calculateReadingTime(content?: string | null): string {
+  if (!content) return '1 min read';
+  const plainText = content.replace(/<[^>]*>/g, ' ');
+  const wordCount = plainText.trim().split(/\s+/).filter(Boolean).length;
+  const minutes = Math.max(1, Math.ceil(wordCount / 200));
+  return `${minutes} min read`;
+}
+
 /**
  * Custom React hook to dynamically update document title and OpenGraph/Twitter meta tags for SEO & Social Sharing.
  */

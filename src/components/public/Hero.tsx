@@ -7,34 +7,11 @@ import { FloatingIcon, BackgroundBlobs } from './VisualElements';
 
 export default function Hero() {
   const { profile, avatarUrl } = useProfile();
-  const [displayedName, setDisplayedName] = React.useState('');
+  const [displayedName, setDisplayedName] = React.useState(profile.name || '');
 
   React.useEffect(() => {
     if (!profile.name) return;
-    
-    let isMounted = true;
-    setDisplayedName('');
-    let interval: any = null;
-    
-    const startTimeout = setTimeout(() => {
-      let i = 0;
-      const nameStr = profile.name;
-      interval = setInterval(() => {
-        if (!isMounted) return;
-        if (i < nameStr.length) {
-          setDisplayedName(nameStr.slice(0, i + 1));
-          i++;
-        } else {
-          if (interval) clearInterval(interval);
-        }
-      }, 70);
-    }, 450);
-
-    return () => {
-      isMounted = false;
-      clearTimeout(startTimeout);
-      if (interval) clearInterval(interval);
-    };
+    setDisplayedName(profile.name);
   }, [profile.name]);
 
   const handleDownloadCV = (e: React.MouseEvent) => {
@@ -78,6 +55,8 @@ export default function Hero() {
             <img 
               src={avatarUrl} 
               alt={profile.name} 
+              loading="eager"
+              decoding="async"
               draggable={false}
               className="w-full h-full object-cover grayscale-[20%] group-hover:grayscale-0 transition-all duration-500 pointer-events-none"
             />

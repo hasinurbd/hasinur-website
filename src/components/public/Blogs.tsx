@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { supabase, hasSupabaseConfig } from '../../lib/supabaseClient';
 import { getMockData, mockBlogs as defaultMockBlogs } from '../../lib/mockData';
-import { Calendar, ArrowRight, FileText, MessageSquare, Heart } from 'lucide-react';
+import { Calendar, ArrowRight, FileText, MessageSquare, Heart, Clock } from 'lucide-react';
 import { FloatingIcon, BackgroundBlobs } from './VisualElements';
 import { Link } from 'react-router-dom';
-import { slugify, sanitizeHtml } from '../../lib/utils';
+import { slugify, sanitizeHtml, calculateReadingTime } from '../../lib/utils';
 
 export default function Blogs() {
   const [blogs, setBlogs] = useState<any[]>([]);
@@ -89,9 +89,15 @@ export default function Blogs() {
                 )}
                 
                 <div className="p-5 flex flex-col flex-1">
-                  <div className="flex items-center text-blue-400 text-[10px] font-black tracking-[0.2em] mb-3 uppercase">
-                    <Calendar size={12} className="mr-2" />
-                    {new Date(blog.published_at).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
+                  <div className="flex items-center justify-between text-blue-400 text-[10px] font-black tracking-[0.2em] mb-3 uppercase">
+                    <div className="flex items-center">
+                      <Calendar size={12} className="mr-1.5" />
+                      {new Date(blog.published_at).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
+                    </div>
+                    <div className="flex items-center text-slate-400">
+                      <Clock size={12} className="mr-1 text-blue-500" />
+                      {calculateReadingTime(blog.content)}
+                    </div>
                   </div>
                   
                   <h3 className="text-lg font-bold text-white mb-3 group-hover:text-blue-400 transition-colors leading-tight line-clamp-2">

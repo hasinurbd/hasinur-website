@@ -1,37 +1,30 @@
-import React, { Suspense, lazy, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import Navbar from '../components/public/Navbar';
 import Hero from '../components/public/Hero';
-import { supabase, hasSupabaseConfig } from '../lib/supabaseClient';
+import Clients from '../components/public/Clients';
+import Experience from '../components/public/Experience';
+import Skills from '../components/public/Skills';
+import Reviews from '../components/public/Reviews';
+import Projects from '../components/public/Projects';
+import Achievements from '../components/public/Achievements';
+import Blogs from '../components/public/Blogs';
+import Contact from '../components/public/Contact';
+import Footer from '../components/public/Footer';
+import FloatingChat from '../components/public/FloatingChat';
 import { useLocation } from 'react-router-dom';
-
-const Experience = lazy(() => import('../components/public/Experience'));
-const Skills = lazy(() => import('../components/public/Skills'));
-const Reviews = lazy(() => import('../components/public/Reviews'));
-const Projects = lazy(() => import('../components/public/Projects'));
-const Achievements = lazy(() => import('../components/public/Achievements'));
-const Blogs = lazy(() => import('../components/public/Blogs'));
-const Contact = lazy(() => import('../components/public/Contact'));
-const Footer = lazy(() => import('../components/public/Footer'));
-const FloatingChat = lazy(() => import('../components/public/FloatingChat'));
-const Clients = lazy(() => import('../components/public/Clients'));
-
-const LoaderFallback = () => (
-  <div className="w-full py-20 flex justify-center items-center">
-    <div className="w-8 h-8 rounded-full border-4 border-blue-500/20 border-t-blue-500 animate-spin"></div>
-  </div>
-);
 
 export default function Home() {
   const location = useLocation();
 
   useEffect(() => {
-    // Update title based on root profile
-    const saved = localStorage.getItem('mock_profile');
+    const saved = localStorage.getItem('profile_cache') || localStorage.getItem('mock_profile');
     if (saved) {
-      const profile = JSON.parse(saved);
-      if (profile.name) {
-        document.title = profile.name;
-      }
+      try {
+        const profile = JSON.parse(saved);
+        if (profile && profile.name) {
+          document.title = profile.name;
+        }
+      } catch (e) {}
     }
   }, [location.pathname]);
 
@@ -41,22 +34,18 @@ export default function Home() {
       <Navbar />
       <main className="relative z-10 w-full overflow-hidden">
         <Hero />
-        <Suspense fallback={<LoaderFallback />}>
-          <Clients />
-          <Experience />
-          <Skills />
-          <Reviews />
-          <Projects />
-          <Achievements />
-          <Blogs />
-          <Contact />
-        </Suspense>
+        <Clients />
+        <Experience />
+        <Skills />
+        <Reviews />
+        <Projects />
+        <Achievements />
+        <Blogs />
+        <Contact />
       </main>
       <div className="relative z-10">
-        <Suspense fallback={<LoaderFallback />}>
-          <Footer />
-          <FloatingChat />
-        </Suspense>
+        <Footer />
+        <FloatingChat />
       </div>
     </div>
   );

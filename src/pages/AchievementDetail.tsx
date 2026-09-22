@@ -1,12 +1,14 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
-import { Award, Calendar, User, ArrowLeft, Send, MessageSquare, ChevronLeft, ChevronRight, Heart, Share2, FileDown } from 'lucide-react';
+import { Award, Calendar, User, ArrowLeft, Send, MessageSquare, ChevronLeft, ChevronRight, Heart, Share2, FileDown, Link2, Check } from 'lucide-react';
 import { supabase, hasSupabaseConfig } from '../lib/supabaseClient';
 import { getMockData, mockAchievements } from '../lib/mockData';
 import { sanitizeHtml, useDocumentMetadata } from '../lib/utils';
+import { downloadPDF } from '../lib/pdfGenerator';
 import Navbar from '../components/public/Navbar';
 import Footer from '../components/public/Footer';
+import ScrollProgressBar from '../components/public/ScrollProgressBar';
 
 export default function AchievementDetail() {
   const { id } = useParams();
@@ -19,6 +21,8 @@ export default function AchievementDetail() {
   // Interaction states
   const [likes, setLikes] = useState(0);
   const [isLiked, setIsLiked] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
   const [comments, setComments] = useState<any[]>([]);
   const [commentName, setCommentName] = useState('');
   const [commentText, setCommentText] = useState('');
@@ -84,20 +88,39 @@ export default function AchievementDetail() {
         await navigator.share({ title: achievement.title, text: 'Check out this achievement', url: window.location.href });
       } catch (e) { console.log('Share aborted'); }
     } else {
-      navigator.clipboard.writeText(window.location.href);
-      alert('Link copied!');
+      handleCopyLink();
     }
   };
 
-  const handleDownloadPDF = () => {
-    if (window.self !== window.top) {
-      const confirmOpen = window.confirm("Printing works best in a new tab. Would you like to open this achievement in a new tab to download the PDF?");
-      if (confirmOpen) {
-        window.open(window.location.href, '_blank');
-        return;
-      }
+  const handleCopyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2500);
+    } catch (err) {
+      console.error('Copy link error:', err);
     }
-    window.print();
+  };
+
+  const handleDownloadPDF = async () => {
+    if (isDownloadingPdf || !achievement) return;
+    setIsDownloadingPdf(true);
+    try {
+      await downloadPDF('achievement-printable-content', achievement.title || 'achievement', {
+        title: achievement.title,
+        category: 'Achievement Unlocked',
+        date: achievement.date ? new Date(achievement.date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : '',
+        author: achievement.author ? `Issued by ${achievement.author}` : undefined,
+        contentHtml: achievement.description,
+        imageUrl: achievement.image_url || (achievement.gallery && achievement.gallery[0]),
+        likes: likes,
+        comments: comments
+      });
+    } catch (err) {
+      console.error('Download PDF error:', err);
+    } finally {
+      setIsDownloadingPdf(false);
+    }
   };
 
   const handleCommentSubmit = async (e: React.FormEvent) => {
@@ -159,6 +182,7 @@ export default function AchievementDetail() {
 
   return (
     <div className="min-h-screen bg-slate-950 text-white font-sans">
+      <ScrollProgressBar />
       <Navbar />
       
       <main className="pt-24 pb-20 px-4 md:px-6 max-w-5xl mx-auto">
@@ -167,7 +191,8 @@ export default function AchievementDetail() {
           <span className="font-black uppercase tracking-widest text-xs">Back to Achievements</span>
         </Link>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
+        <div id="achievement-printable-content" className="p-4 rounded-3xl bg-slate-950">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
           {/* Left Side: Images */}
           <div className="space-y-6">
             <div className="relative aspect-square rounded-3xl overflow-hidden border border-white/10 shadow-2xl group bg-slate-900/50 flex items-center justify-center">
@@ -276,9 +301,32 @@ export default function AchievementDetail() {
 
               <div className="flex-grow"></div>
 
-              <div className="flex gap-2">
-                 <button onClick={handleShare} className="p-4 bg-slate-800 hover:bg-slate-700 text-white rounded-2xl transition-all"><Share2 size={20} /></button>
-                 <button onClick={handleDownloadPDF} className="p-4 bg-slate-800 hover:bg-slate-700 text-white rounded-2xl transition-all"><FileDown size={20} /></button>
+              <div className="flex gap-2 items-center">
+                 <button 
+                   onClick={handleCopyLink} 
+                   className={`flex items-center gap-2 px-4 py-3.5 rounded-2xl font-bold text-xs transition-all ${
+                     copied 
+                       ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 shadow-lg shadow-emerald-500/10' 
+                       : 'bg-slate-800 hover:bg-slate-700 text-white'
+                   }`}
+                   title="Copy direct link to clipboard"
+                 >
+                   {copied ? <Check size={18} className="text-emerald-400" /> : <Link2 size={18} />}
+                   <span className="font-bold text-xs">{copied ? 'Copied!' : 'Copy Link'}</span>
+                 </button>
+                 <button onClick={handleShare} className="p-4 bg-slate-800 hover:bg-slate-700 text-white rounded-2xl transition-all" title="Share"><Share2 size={20} /></button>
+                 <button 
+                   onClick={handleDownloadPDF} 
+                   disabled={isDownloadingPdf}
+                   className="p-4 bg-slate-800 hover:bg-slate-700 disabled:opacity-50 text-white rounded-2xl transition-all flex items-center gap-2" 
+                   title="Download PDF"
+                 >
+                   {isDownloadingPdf ? (
+                     <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                   ) : (
+                     <FileDown size={20} />
+                   )}
+                 </button>
               </div>
             </div>
 
@@ -293,6 +341,7 @@ export default function AchievementDetail() {
               </a>
             )}
           </div>
+        </div>
         </div>
 
         {/* Comments Section */}

@@ -37,9 +37,27 @@ const getAvatarUrl = (url?: string) => {
   return "https://jtcepxgoqbyfwljezndt.supabase.co/storage/v1/object/public/portfolio_assets/hasinur_profile_pic_design_in_ps.png";
 };
 
+const getInitialProfile = (): Profile => {
+  try {
+    const cached = localStorage.getItem('profile_cache');
+    if (cached) {
+      const parsed = JSON.parse(cached);
+      if (parsed) {
+        if (parsed.phone === "+8801518914773" || parsed.phone === "01518914773" || (parsed.phone && parsed.phone.includes("1518914773"))) {
+          parsed.phone = "+8801647706099";
+        }
+        return parsed;
+      }
+    }
+  } catch (e) {
+    // Ignore parse error
+  }
+  return getMockProfile();
+};
+
 export const ProfileProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [profile, setProfile] = useState<Profile>(getMockProfile());
-  const [loading, setLoading] = useState(true);
+  const [profile, setProfile] = useState<Profile>(getInitialProfile);
+  const [loading, setLoading] = useState(false);
 
   const fetchProfile = async () => {
     setLoading(true);

@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
-import { ExternalLink, Calendar, Tag, ArrowLeft, Heart, Share2, FileDown, MessageSquare, ChevronLeft, ChevronRight, Send } from 'lucide-react';
+import { ExternalLink, Calendar, Tag, ArrowLeft, Heart, Share2, FileDown, MessageSquare, ChevronLeft, ChevronRight, Send, Link2, Check } from 'lucide-react';
 import { supabase, hasSupabaseConfig } from '../lib/supabaseClient';
 import { getMockData, mockPortfolioItems } from '../lib/mockData';
 import { sanitizeHtml, useDocumentMetadata } from '../lib/utils';
+import { downloadPDF } from '../lib/pdfGenerator';
 import Navbar from '../components/public/Navbar';
 import Footer from '../components/public/Footer';
+import ScrollProgressBar from '../components/public/ScrollProgressBar';
 
 export default function ProjectDetail() {
   const { id } = useParams();
@@ -19,6 +21,8 @@ export default function ProjectDetail() {
   // Interaction states
   const [likes, setLikes] = useState(0);
   const [isLiked, setIsLiked] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
   const [comments, setComments] = useState<any[]>([]);
   const [commentName, setCommentName] = useState('');
   const [commentText, setCommentText] = useState('');
@@ -94,21 +98,37 @@ export default function ProjectDetail() {
         console.log('Share aborted');
       }
     } else {
-      navigator.clipboard.writeText(window.location.href);
-      alert('Link copied to clipboard!');
+      handleCopyLink();
     }
   };
 
-  const handleDownloadPDF = () => {
-    // If in iframe, suggest opening in new tab for better print experience
-    if (window.self !== window.top) {
-      const confirmOpen = window.confirm("Printing works best in a new tab. Would you like to open this project in a new tab to download the PDF?");
-      if (confirmOpen) {
-        window.open(window.location.href, '_blank');
-        return;
-      }
+  const handleCopyLink = async () => {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2500);
+    } catch (err) {
+      console.error('Copy link error:', err);
     }
-    window.print();
+  };
+
+  const handleDownloadPDF = async () => {
+    if (isDownloadingPdf || !project) return;
+    setIsDownloadingPdf(true);
+    try {
+      await downloadPDF('project-printable-content', project.title || 'project', {
+        title: project.title,
+        category: project.category,
+        contentHtml: project.description,
+        imageUrl: project.image_url || (project.gallery && project.gallery[0]),
+        likes: likes,
+        comments: comments
+      });
+    } catch (err) {
+      console.error('Download PDF error:', err);
+    } finally {
+      setIsDownloadingPdf(false);
+    }
   };
 
   const handleCommentSubmit = async (e: React.FormEvent) => {
@@ -170,6 +190,7 @@ export default function ProjectDetail() {
 
   return (
     <div className="min-h-screen bg-slate-950 text-white font-sans print:bg-white print:text-black">
+      <ScrollProgressBar />
       <div className="print:hidden">
         <Navbar />
       </div>
@@ -182,8 +203,9 @@ export default function ProjectDetail() {
           </Link>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
-          {/* Main Visuals - 7 Columns */}
+        <div id="project-printable-content" className="p-4 rounded-3xl bg-slate-950">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
+            {/* Main Visuals - 7 Columns */}
           <div className="lg:col-span-12 xl:col-span-7 space-y-6">
             <div className="relative aspect-video rounded-3xl overflow-hidden border border-white/10 shadow-2xl group bg-slate-900 print:rounded-none print:border-none flex items-center justify-center">
               {/* Premium blurred backdrop to fill aspect ratio gaps beautifully without cropping any custom aspect ratio images */}
@@ -296,7 +318,19 @@ export default function ProjectDetail() {
 
                 <div className="flex-grow"></div>
 
-                <div className="flex gap-2">
+                <div className="flex gap-2 items-center">
+                   <button 
+                     onClick={handleCopyLink} 
+                     className={`flex items-center gap-2 px-4 py-3.5 rounded-2xl font-bold text-xs transition-all ${
+                       copied 
+                         ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 shadow-lg shadow-emerald-500/10' 
+                         : 'bg-slate-800 hover:bg-slate-700 text-white'
+                     }`}
+                     title="Copy direct link to clipboard"
+                   >
+                     {copied ? <Check size={18} className="text-emerald-400" /> : <Link2 size={18} />}
+                     <span className="font-bold text-xs">{copied ? 'Copied!' : 'Copy Link'}</span>
+                   </button>
                    <button 
                      onClick={handleShare}
                      className="p-4 bg-slate-800 hover:bg-slate-700 text-white rounded-2xl transition-all hover:scale-110 active:scale-95"
@@ -306,10 +340,15 @@ export default function ProjectDetail() {
                    </button>
                    <button 
                      onClick={handleDownloadPDF}
-                     className="p-4 bg-slate-800 hover:bg-slate-700 text-white rounded-2xl transition-all hover:scale-110 active:scale-95"
+                     disabled={isDownloadingPdf}
+                     className="p-4 bg-slate-800 hover:bg-slate-700 disabled:opacity-50 text-white rounded-2xl transition-all hover:scale-110 active:scale-95 flex items-center gap-2"
                      title="Download as PDF"
                    >
-                     <FileDown size={20} />
+                     {isDownloadingPdf ? (
+                       <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                     ) : (
+                       <FileDown size={20} />
+                     )}
                    </button>
                 </div>
              </div>
@@ -325,6 +364,7 @@ export default function ProjectDetail() {
                </a>
              )}
           </div>
+        </div>
         </div>
 
         {/* Interaction/Comments Section */}
