@@ -17,6 +17,7 @@ interface Profile {
   instagram_url: string;
   linkedin_url: string;
   behance_url: string;
+  github_url?: string;
   twitter_url: string;
   youtube_url: string;
   website_url: string;

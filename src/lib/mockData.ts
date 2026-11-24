@@ -18,15 +18,23 @@ export const defaultMockProfile = {
 
 export const getMockData = (key: string, defaultValue: any) => {
   if (typeof window !== 'undefined') {
-    const saved = localStorage.getItem(key);
-    if (saved) return JSON.parse(saved);
+    try {
+      const saved = localStorage.getItem(key);
+      if (saved) return JSON.parse(saved);
+    } catch (err) {
+      console.error(`Error parsing localStorage key "${key}":`, err);
+    }
   }
   return defaultValue;
 };
 
 export const saveMockData = (key: string, data: any) => {
   if (typeof window !== 'undefined') {
-    localStorage.setItem(key, JSON.stringify(data));
+    try {
+      localStorage.setItem(key, JSON.stringify(data));
+    } catch (err) {
+      console.error(`Error saving localStorage key "${key}":`, err);
+    }
   }
 };
 

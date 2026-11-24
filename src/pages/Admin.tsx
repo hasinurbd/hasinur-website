@@ -12,35 +12,57 @@ export default function Admin() {
   const [showErrorModal, setShowErrorModal] = useState(false);
 
   useEffect(() => {
+    let isMounted = true;
+
     // Check for existing local admin session first
-    const savedSession = localStorage.getItem('admin_session');
-    if (savedSession) {
-      try {
+    try {
+      const savedSession = localStorage.getItem('admin_session');
+      if (savedSession) {
         setSession(JSON.parse(savedSession));
-      } catch (e) {
-        localStorage.removeItem('admin_session');
       }
+    } catch (e) {
+      try {
+        localStorage.removeItem('admin_session');
+      } catch {}
     }
 
     if (hasSupabaseConfig) {
-      supabase.auth.getSession().then(({ data: { session: supaSession } }) => {
-        if (supaSession) {
-          setSession(supaSession);
-          localStorage.setItem('admin_session', JSON.stringify(supaSession));
-        }
-      });
+      supabase.auth
+        .getSession()
+        .then(({ data: { session: supaSession } }) => {
+          if (!isMounted) return;
+          if (supaSession) {
+            setSession(supaSession);
+            try {
+              localStorage.setItem('admin_session', JSON.stringify(supaSession));
+            } catch {}
+          }
+        })
+        .catch((err) => {
+          console.warn('Supabase session check failed:', err);
+        });
 
       const {
         data: { subscription },
       } = supabase.auth.onAuthStateChange((_event, supaSession) => {
+        if (!isMounted) return;
         if (supaSession) {
           setSession(supaSession);
-          localStorage.setItem('admin_session', JSON.stringify(supaSession));
+          try {
+            localStorage.setItem('admin_session', JSON.stringify(supaSession));
+          } catch {}
         }
       });
 
-      return () => subscription.unsubscribe();
+      return () => {
+        isMounted = false;
+        subscription.unsubscribe();
+      };
     }
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -63,7 +85,9 @@ export default function Admin() {
 
         if (!supaError && supaData?.session) {
           setSession(supaData.session);
-          localStorage.setItem('admin_session', JSON.stringify(supaData.session));
+          try {
+            localStorage.setItem('admin_session', JSON.stringify(supaData.session));
+          } catch {}
           authenticated = true;
           setLoading(false);
           return;
@@ -92,7 +116,9 @@ export default function Admin() {
                 },
                 access_token: 'admin-table-authenticated-token'
               };
-              localStorage.setItem('admin_session', JSON.stringify(customSession));
+              try {
+                localStorage.setItem('admin_session', JSON.stringify(customSession));
+              } catch {}
               setSession(customSession);
               authenticated = true;
               setLoading(false);
@@ -119,7 +145,9 @@ export default function Admin() {
           },
           access_token: 'admin-authenticated-token'
         };
-        localStorage.setItem('admin_session', JSON.stringify(adminSession));
+        try {
+          localStorage.setItem('admin_session', JSON.stringify(adminSession));
+        } catch {}
         setSession(adminSession);
         authenticated = true;
         setLoading(false);

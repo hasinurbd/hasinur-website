@@ -1,60 +1,96 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { getMockData, mockPortfolioItems } from '../../lib/mockData';
 import { supabase, hasSupabaseConfig } from '../../lib/supabaseClient';
-import { ExternalLink, CodeXml, Layout, Monitor, ChevronRight, Heart, MessageSquare } from 'lucide-react';
+import {
+  ExternalLink,
+  CodeXml,
+  Layout,
+  Monitor,
+  ChevronRight,
+  Heart,
+  MessageSquare,
+  Globe,
+  Maximize2,
+  Image as ImageIcon,
+} from 'lucide-react';
 import { cn, slugify } from '../../lib/utils';
 import { FloatingIcon, BackgroundBlobs } from './VisualElements';
-import { motion, AnimatePresence } from 'motion/react';
+import { LivePreviewModal, isValidWebUrl, normalizeWebUrl } from './LiveBrowserFrame';
+import { motion } from 'motion/react';
 import { Link } from 'react-router-dom';
 
-type Category = 'all' | 'graphics' | 'video' | 'web' | 'projects';
+function stripHtml(html?: string): string {
+  if (!html) return '';
+  if (typeof window !== 'undefined' && typeof DOMParser !== 'undefined') {
+    const doc = new DOMParser().parseFromString(html, 'text/html');
+    return (doc.body.textContent || '').replace(/\s+/g, ' ').trim();
+  }
+  return html.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+}
 
 export default function Projects() {
   const [items, setItems] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState<string>('all');
+  const [previewProject, setPreviewProject] = useState<any | null>(null);
 
   useEffect(() => {
+    let isMounted = true;
+
     const fetchItems = async () => {
       let data: any[] | null = null;
-      if (hasSupabaseConfig) {
-        const { data: dbData } = await supabase.from('portfolio_items').select('*').order('start_date', { ascending: false });
-        // Handle potential column missing error if recently added
-        if (dbData) {
-          data = dbData;
-        } else {
-          const { data: fallback } = await supabase.from('portfolio_items').select('*').order('created_at', { ascending: false });
-          data = fallback;
+      try {
+        if (hasSupabaseConfig) {
+          const { data: dbData, error } = await supabase
+            .from('portfolio_items')
+            .select('*')
+            .order('start_date', { ascending: false });
+          if (dbData && !error) {
+            data = dbData;
+          } else {
+            const { data: fallback } = await supabase
+              .from('portfolio_items')
+              .select('*')
+              .order('created_at', { ascending: false });
+            data = fallback;
+          }
         }
+      } catch (err) {
+        console.error('Error fetching portfolio items:', err);
       }
-      
-      if (data === null) {
+
+      if (!data || data.length === 0) {
         data = getMockData('mock_portfolio', mockPortfolioItems);
-      } else if (data.length === 0) {
-        const localSaved = localStorage.getItem('mock_portfolio');
-        if (localSaved) {
-          data = JSON.parse(localSaved);
-        }
       }
-      
-      // Ensure sorted by start_date (latest first)
+
       const sorted = [...(data || [])].sort((a, b) => {
-        const dateA = new Date(a.start_date || a.created_at || 0).getTime();
-        const dateB = new Date(b.start_date || b.created_at || 0).getTime();
+        const dateA = new Date(a.start_date || a.created_at || 0).getTime() || 0;
+        const dateB = new Date(b.start_date || b.created_at || 0).getTime() || 0;
         return dateB - dateA;
       });
-      setItems(sorted);
+      if (isMounted) setItems(sorted);
     };
+
     fetchItems();
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
-  const categories = ['all', ...Array.from(new Set(items.map(item => (item.category as string)?.trim() || ''))).filter(c => c !== '')];
+  const categories = [
+    'all',
+    ...Array.from(new Set(items.map((item) => (item.category as string)?.trim() || ''))).filter(
+      (c) => c !== ''
+    ),
+  ];
 
-  const filtered = items.filter(item => activeTab === 'all' || (item.category as string)?.trim() === activeTab);
+  const filtered = items.filter(
+    (item) => activeTab === 'all' || (item.category as string)?.trim() === activeTab
+  );
 
   return (
-    <section id="portfolio" className="relative py-12 px-4 overflow-hidden">
+    <section id="portfolio" className="relative py-16 lg:py-20 px-4 overflow-hidden">
       <BackgroundBlobs />
-      
+
       <div className="absolute inset-0 pointer-events-none">
         <FloatingIcon icon={<CodeXml size={16} />} top="10%" left="8%" delay={0} />
         <FloatingIcon icon={<Layout size={16} />} top="60%" left="92%" delay={1} />
@@ -62,15 +98,20 @@ export default function Projects() {
       </div>
 
       <div className="max-w-6xl mx-auto relative z-10">
-        <div className="text-center mb-10">
+        <div className="text-center mb-10 lg:mb-12">
           <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            whileInView={{ opacity: 1, scale: 1 }}
-            viewport={{ once: true }}
+            initial={{ opacity: 0, y: 14 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, amount: 0.05 }}
+            transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
           >
-            <span className="text-blue-500 font-bold tracking-[0.3em] uppercase text-[9px] mb-2 block">Portfolio</span>
-            <h2 className="text-2xl md:text-3xl font-black mb-3 tracking-tight text-white uppercase">Selected Projects</h2>
-            <div className="w-10 h-0.5 bg-blue-600 mx-auto rounded-full shadow-[0_0_10px_rgba(37,99,235,0.3)]"></div>
+            <span className="text-blue-400 font-semibold tracking-[0.28em] uppercase text-[11px] mb-3 block">
+              Portfolio
+            </span>
+            <h2 className="text-3xl sm:text-4xl lg:text-[42px] font-black mb-4 tracking-tight text-white">
+              Selected Projects
+            </h2>
+            <div className="w-12 h-0.5 bg-gradient-to-r from-blue-600 via-indigo-500 to-cyan-400 mx-auto rounded-full"></div>
           </motion.div>
         </div>
 
@@ -82,100 +123,290 @@ export default function Projects() {
           ))}
         </div>
 
-        <motion.div 
-          layout
-          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 md:gap-8"
-        >
+        <motion.div layout className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           {filtered.map((item, idx) => (
-            <motion.div
+            <ProjectShowcaseCard
               key={item.id}
-              layout
-              initial={{ opacity: 0, scale: 0.9 }}
-              whileInView={{ opacity: 1, scale: 1 }}
-              viewport={{ once: true }}
-              transition={{ delay: idx * 0.05 }}
-            >
-              <Link 
-                to={`/project/${item.id}--${slugify(item.title)}`} 
-                className="group relative overflow-hidden rounded-[2rem] bg-slate-900 aspect-[4/3] block border border-white/5 shadow-2xl transition-all duration-500 hover:border-blue-500/50 hover:shadow-blue-500/10"
-              >
-                <div className="absolute inset-0 bg-slate-800 flex items-center justify-center">
-                  {item.image_url ? (
-                    <img src={item.image_url} alt={item.title} loading="lazy" className="absolute inset-0 w-full h-full object-cover transition-all duration-700 group-hover:scale-110 group-hover:rotate-2" />
-                  ) : (
-                    <div className="text-slate-600 flex flex-col items-center gap-2">
-                      <Monitor size={24} />
-                      <span className="font-bold text-[9px] uppercase tracking-widest">Case Study</span>
-                    </div>
-                  )}
-                </div>
-
-                {/* Love & Comments Badges */}
-                <div className="absolute top-4 right-4 flex gap-2">
-                   <div className="bg-black/50 backdrop-blur-md px-2 py-1 rounded-full text-[8px] font-black uppercase text-slate-300 flex items-center gap-1 border border-white/10 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <Heart size={10} className="text-red-500" fill="currentColor" />
-                      {item.likes || 0}
-                   </div>
-                   <div className="bg-black/50 backdrop-blur-md px-2 py-1 rounded-full text-[8px] font-black uppercase text-slate-300 flex items-center gap-1 border border-white/10 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <MessageSquare size={10} className="text-blue-500" />
-                      {item.comments?.length || 0}
-                   </div>
-                </div>
-
-                {/* Gradient Overlays */}
-                <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/20 to-transparent opacity-60 group-hover:opacity-80 transition-all duration-500"></div>
-                <div className="absolute inset-0 bg-blue-600/10 opacity-0 group-hover:opacity-100 transition-opacity duration-700"></div>
-                
-                {/* Content */}
-                <div className="absolute inset-x-0 bottom-0 p-6 translate-y-6 group-hover:translate-y-0 transition-transform duration-500 ease-out">
-                  <div className="max-w-full">
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className="h-1 w-3 bg-blue-500 rounded-full group-hover:w-6 transition-all duration-500"></span>
-                      <span className="uppercase text-[9px] font-black tracking-[0.2em] text-blue-400">{item.category}</span>
-                    </div>
-                    <h3 className="text-xl font-black text-white mb-4 line-clamp-1 group-hover:text-blue-400 transition-colors uppercase tracking-tighter">{item.title}</h3>
-                  </div>
-                  
-                  <div className="flex items-center justify-between opacity-0 group-hover:opacity-100 transition-all duration-500 translate-y-4 group-hover:translate-y-0 delay-100">
-                    <div className="flex items-center gap-2 text-[9px] font-black text-white/60 uppercase tracking-widest">
-                      <span>Explore Project</span>
-                      <ChevronRight size={10} className="text-blue-500" />
-                    </div>
-                    <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center text-white shadow-xl transform rotate-12 group-hover:rotate-0 transition-transform duration-500">
-                      <ExternalLink size={16} />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Glass reflection decorative element */}
-                <div className="absolute -top-24 -left-24 w-48 h-48 bg-white/5 rounded-full blur-3xl transition-all duration-700 group-hover:translate-x-full group-hover:translate-y-full"></div>
-              </Link>
-            </motion.div>
+              item={item}
+              index={idx}
+              onOpenLiveModal={() => setPreviewProject(item)}
+            />
           ))}
         </motion.div>
       </div>
+
+      <LivePreviewModal project={previewProject} onClose={() => setPreviewProject(null)} />
     </section>
   );
 }
 
-function TabButton({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode; key?: string | number }) {
+interface ProjectShowcaseCardProps {
+  key?: React.Key;
+  item: any;
+  index: number;
+  onOpenLiveModal: () => void;
+}
+
+function ProjectShowcaseCard({ item, index, onOpenLiveModal }: ProjectShowcaseCardProps) {
+  const hasLiveLink = isValidWebUrl(item.link);
+  const [showLiveEmbed, setShowLiveEmbed] = useState<boolean>(hasLiveLink);
+  const [iframeLoaded, setIframeLoaded] = useState<boolean>(false);
+  const [isNearViewport, setIsNearViewport] = useState<boolean>(false);
+  const previewContainerRef = useRef<HTMLDivElement>(null);
+  const [scale, setScale] = useState<number>(0.28);
+
+  useEffect(() => {
+    setShowLiveEmbed(hasLiveLink);
+  }, [hasLiveLink]);
+
+  useEffect(() => {
+    const el = previewContainerRef.current;
+    if (!el) return;
+
+    const updateScale = () => {
+      const width = el.clientWidth;
+      if (width > 0) {
+        setScale(width / 1280);
+      }
+    };
+
+    updateScale();
+    const resizeObserver = new ResizeObserver(updateScale);
+    resizeObserver.observe(el);
+
+    const intersectionObserver = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) {
+          setIsNearViewport(true);
+          intersectionObserver.disconnect();
+        }
+      },
+      { rootMargin: '250px' }
+    );
+    intersectionObserver.observe(el);
+
+    return () => {
+      resizeObserver.disconnect();
+      intersectionObserver.disconnect();
+    };
+  }, []);
+
+  const projectHref = `/project/${item.id}--${slugify(item.title)}`;
+  const plainDescription = stripHtml(item.description);
+  const tags: string[] = Array.isArray(item.tags) ? item.tags.filter(Boolean) : [];
+  const visibleTags = tags.slice(0, 3);
+  const extraTagCount = Math.max(0, tags.length - 3);
+
   return (
-    <button 
+    <motion.article
+      layout
+      initial={{ opacity: 0, y: 20 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, amount: 0.05 }}
+      transition={{ delay: Math.min(index * 0.05, 0.25) }}
+      className="group relative flex flex-col rounded-2xl overflow-hidden bg-slate-900/45 backdrop-blur-md border border-white/[0.08] hover:border-blue-500/40 transition-all duration-300 hover:-translate-y-1 shadow-[0_1px_0_0_rgba(255,255,255,0.04)_inset,0_18px_36px_-20px_rgba(0,0,0,0.65)] hover:shadow-[0_20px_44px_-16px_rgba(37,99,235,0.18)]"
+    >
+      {/* Top Preview Window (Live Website Viewport or Cover Image) */}
+      <div
+        ref={previewContainerRef}
+        className="relative w-full aspect-[16/10] bg-slate-900 overflow-hidden border-b border-white/[0.06]"
+      >
+        {/* Background Cover Image (Shown when no live link, toggled off, or while live iframe loads) */}
+        {item.image_url ? (
+          <img
+            src={item.image_url}
+            alt={item.title}
+            loading="lazy"
+            decoding="async"
+            className={cn(
+              'absolute inset-0 w-full h-full object-cover transition-transform duration-500',
+              !showLiveEmbed && 'group-hover:scale-105'
+            )}
+          />
+        ) : (
+          <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-600 gap-2 bg-slate-900">
+            <Monitor size={28} />
+            <span className="font-bold text-[10px] uppercase tracking-widest">Project Preview</span>
+          </div>
+        )}
+
+        {/* Live Website Scaled Desktop Viewport (Mounted lazily when near viewport) */}
+        {hasLiveLink && showLiveEmbed && isNearViewport && (
+          <div
+            className={cn(
+              'absolute inset-0 bg-white transition-opacity duration-500',
+              iframeLoaded ? 'opacity-100' : item.image_url ? 'opacity-0' : 'opacity-100'
+            )}
+          >
+            <iframe
+              src={normalizeWebUrl(item.link)}
+              title={`${item.title} live website view`}
+              loading="lazy"
+              tabIndex={-1}
+              onLoad={() => setIframeLoaded(true)}
+              sandbox="allow-scripts allow-same-origin allow-forms"
+              referrerPolicy="no-referrer-when-downgrade"
+              style={{
+                width: '1280px',
+                height: '800px',
+                transform: `scale(${scale})`,
+                transformOrigin: 'top left',
+              }}
+              className="absolute top-0 left-0 border-0 pointer-events-none bg-white"
+            />
+          </div>
+        )}
+
+        {/* Subtle Top Scrim for Overlay Controls */}
+        <div className="absolute inset-x-0 top-0 h-14 bg-gradient-to-b from-slate-950/65 to-transparent pointer-events-none z-10" />
+
+        {/* Clickable Preview Link Layer */}
+        <Link
+          to={projectHref}
+          aria-label={`View details for ${item.title}`}
+          className="absolute inset-0 z-10"
+        />
+
+        {/* Top-Left Category Label */}
+        {item.category && (
+          <div className="absolute top-2.5 left-2.5 z-20 max-w-[46%] pointer-events-none">
+            <span className="block truncate px-2.5 py-0.5 rounded-md bg-slate-950/85 backdrop-blur-md border border-white/15 text-[10px] font-semibold text-slate-100 tracking-wide capitalize shadow-md">
+              {item.category}
+            </span>
+          </div>
+        )}
+
+        {/* Top-Right Live Controls */}
+        {hasLiveLink && (
+          <div className="absolute top-2.5 right-2.5 z-20 flex items-center gap-1">
+            {item.image_url && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setShowLiveEmbed((prev) => !prev);
+                }}
+                title={showLiveEmbed ? 'Show project image' : 'Show live website'}
+                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-950/85 hover:bg-slate-800 text-slate-200 backdrop-blur-md border border-white/15 text-[10px] font-semibold transition-colors shadow-md"
+              >
+                {showLiveEmbed ? <ImageIcon size={11} /> : <Globe size={11} />}
+                <span>{showLiveEmbed ? 'Image' : 'Live'}</span>
+              </button>
+            )}
+
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                onOpenLiveModal();
+              }}
+              title="Open interactive live preview"
+              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-950/85 hover:bg-emerald-600 text-emerald-400 hover:text-white backdrop-blur-md border border-emerald-500/40 text-[10px] font-semibold transition-colors shadow-md"
+            >
+              <Maximize2 size={10} />
+              <span>Live View</span>
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Bottom Details Panel */}
+      <div className="flex flex-col flex-1 justify-between p-4">
+        <div>
+          <Link to={projectHref} className="block group/title">
+            <h3 className="text-base font-bold text-white group-hover/title:text-blue-400 group-hover:text-blue-400 transition-colors leading-snug line-clamp-2">
+              {item.title}
+            </h3>
+          </Link>
+
+          {plainDescription && (
+            <p className="text-xs text-slate-400 leading-relaxed line-clamp-2 mt-2">
+              {plainDescription}
+            </p>
+          )}
+
+          {visibleTags.length > 0 && (
+            <div className="flex flex-wrap items-center gap-1.5 mt-3">
+              {visibleTags.map((tag) => (
+                <span
+                  key={tag}
+                  className="px-2 py-0.5 rounded bg-slate-800/80 border border-white/[0.07] text-[10px] font-medium text-slate-300"
+                >
+                  {tag}
+                </span>
+              ))}
+              {extraTagCount > 0 && (
+                <span className="px-2 py-0.5 rounded bg-slate-800/60 border border-white/[0.05] text-[10px] font-medium text-slate-400 tabular-nums">
+                  +{extraTagCount}
+                </span>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Footer Actions */}
+        <div className="flex items-center justify-between gap-2 pt-3 mt-3.5 border-t border-white/[0.06]">
+          <div className="flex items-center gap-3 text-[11px] text-slate-400 tabular-nums">
+            <span className="inline-flex items-center gap-1">
+              <Heart size={12} className="text-rose-400" />
+              {item.likes || 0}
+            </span>
+            <span className="inline-flex items-center gap-1">
+              <MessageSquare size={12} className="text-blue-400" />
+              {item.comments?.length || 0}
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2.5">
+            {hasLiveLink && (
+              <a
+                href={normalizeWebUrl(item.link)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-300 hover:text-white transition-colors whitespace-nowrap"
+              >
+                <span>Visit</span>
+                <ExternalLink size={11} />
+              </a>
+            )}
+            <Link
+              to={projectHref}
+              className="inline-flex items-center gap-0.5 text-[11px] font-semibold text-blue-400 hover:text-blue-300 transition-colors whitespace-nowrap"
+            >
+              <span>Details</span>
+              <ChevronRight size={12} />
+            </Link>
+          </div>
+        </div>
+      </div>
+    </motion.article>
+  );
+}
+
+function TabButton({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+  key?: string | number;
+}) {
+  return (
+    <button
+      type="button"
       onClick={onClick}
       className={cn(
-        "px-6 py-2.5 text-[10px] font-black uppercase tracking-[0.2em] transition-all duration-500 rounded-xl relative overflow-hidden group",
-        active 
-          ? "text-white bg-blue-600 shadow-[0_8px_25px_rgba(37,99,235,0.4)] scale-105" 
-          : "text-slate-500 hover:text-white bg-slate-900/50 border border-white/5 hover:border-white/20"
+        'px-5 py-2.5 rounded-xl text-xs font-semibold uppercase tracking-wider transition-all duration-200 backdrop-blur-md border cursor-pointer',
+        active
+          ? 'bg-blue-600 text-white border-blue-500 shadow-[0_8px_24px_rgba(37,99,235,0.35)]'
+          : 'bg-slate-900/60 text-slate-400 border-white/[0.08] hover:border-white/20 hover:text-white'
       )}
     >
-      <span className="relative z-10">{children}</span>
-      {active && (
-        <motion.div 
-          layoutId="activeProjectTab"
-          className="absolute inset-0 bg-gradient-to-r from-blue-600 to-indigo-600 -z-10"
-        />
-      )}
+      {children}
     </button>
   );
 }

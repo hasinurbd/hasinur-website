@@ -36,34 +36,53 @@ export default function BlogDetail() {
   });
 
   useEffect(() => {
+    let isMounted = true;
+
     const fetchBlog = async () => {
       setLoading(true);
+      setActiveImageIndex(0);
       try {
-        if (hasSupabaseConfig) {
-          const { data, error } = await supabase.from('blogs').select('*').eq('id', realId).single();
+        let resolved: any = null;
+        if (hasSupabaseConfig && realId) {
+          const { data, error } = await supabase
+            .from('blogs')
+            .select('*')
+            .eq('id', realId)
+            .maybeSingle();
           if (data && !error) {
-            setBlog(data);
-            setLikes(data.likes || 0);
-            setComments(data.comments || []);
+            resolved = data;
           }
-        } else {
+        }
+        if (!resolved && realId) {
           const localData = getMockData('mock_blogs', mockBlogs);
-          const found = localData.find((b: any) => b.id === realId);
-          if (found) {
-            setBlog(found);
-            setLikes(found.likes || 0);
-            setComments(found.comments || []);
-          }
+          resolved = localData.find((b: any) => String(b.id) === String(realId)) || null;
+        }
+        if (isMounted && resolved) {
+          setBlog(resolved);
+          setLikes(resolved.likes || 0);
+          setComments(Array.isArray(resolved.comments) ? resolved.comments : []);
         }
       } catch (err) {
         console.error('Error fetching blog:', err);
+        if (isMounted && realId) {
+          const localData = getMockData('mock_blogs', mockBlogs);
+          const found = localData.find((b: any) => String(b.id) === String(realId));
+          if (found) {
+            setBlog(found);
+            setLikes(found.likes || 0);
+            setComments(Array.isArray(found.comments) ? found.comments : []);
+          }
+        }
       } finally {
-        setLoading(false);
+        if (isMounted) setLoading(false);
       }
     };
 
     fetchBlog();
     window.scrollTo(0, 0);
+    return () => {
+      isMounted = false;
+    };
   }, [realId]);
 
   const handleLike = async () => {
@@ -72,12 +91,14 @@ export default function BlogDetail() {
     setLikes(newLikes);
     setIsLiked(true);
     try {
-      if (hasSupabaseConfig) {
+      const localData = getMockData('mock_blogs', mockBlogs);
+      const updatedLocalData = localData.map((b: any) =>
+        String(b.id) === String(realId) ? { ...b, likes: newLikes } : b
+      );
+      localStorage.setItem('mock_blogs', JSON.stringify(updatedLocalData));
+
+      if (hasSupabaseConfig && realId) {
         await supabase.from('blogs').update({ likes: newLikes }).eq('id', realId);
-      } else {
-        const localData = getMockData('mock_blogs', mockBlogs);
-        const updatedLocalData = localData.map((b: any) => b.id === realId ? { ...b, likes: newLikes } : b);
-        localStorage.setItem('mock_blogs', JSON.stringify(updatedLocalData));
       }
     } catch (err) { console.error(err); }
   };
@@ -125,32 +146,35 @@ export default function BlogDetail() {
 
   const handleCommentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!commentName || !commentText) return;
+    if (!commentName.trim() || !commentText.trim()) return;
 
     setIsSubmitting(true);
     const newComment = {
       id: Date.now().toString(),
-      name: commentName,
-      text: commentText,
+      name: commentName.trim(),
+      text: commentText.trim(),
       created_at: new Date().toISOString()
     };
 
     const updatedComments = [newComment, ...comments];
 
     try {
-      if (hasSupabaseConfig) {
+      const localData = getMockData('mock_blogs', mockBlogs);
+      const updatedLocalData = localData.map((b: any) =>
+        String(b.id) === String(realId) ? { ...b, comments: updatedComments } : b
+      );
+      localStorage.setItem('mock_blogs', JSON.stringify(updatedLocalData));
+
+      if (hasSupabaseConfig && realId) {
         const { error } = await supabase
           .from('blogs')
           .update({ comments: updatedComments })
           .eq('id', realId);
-        
-        if (error) throw error;
-      } else {
-        const localData = getMockData('mock_blogs', mockBlogs);
-        const updatedLocalData = localData.map((b: any) => b.id === realId ? { ...b, comments: updatedComments } : b);
-        localStorage.setItem('mock_blogs', JSON.stringify(updatedLocalData));
+        if (error) {
+          console.warn('Supabase comment sync skipped:', error.message);
+        }
       }
-      
+
       setComments(updatedComments);
       setCommentText('');
       setCommentName('');
@@ -205,7 +229,13 @@ export default function BlogDetail() {
           <div className="flex flex-wrap gap-6 text-slate-400 font-bold uppercase tracking-widest text-[10px]">
             <div className="flex items-center gap-2">
               <Calendar size={14} className="text-blue-500" />
-              {new Date(blog.published_at).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
+              {(() => {
+                const raw = blog.published_at || blog.created_at;
+                const d = raw ? new Date(raw) : null;
+                return d && !isNaN(d.getTime())
+                  ? d.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+                  : 'Recent';
+              })()}
             </div>
             <div className="flex items-center gap-2">
               <Clock size={14} className="text-blue-500" />
@@ -215,6 +245,7 @@ export default function BlogDetail() {
         </div>
 
         {/* Gallery / Cover Section */}
+        {gallery.length > 0 && (
         <div className="mb-12 space-y-4">
           <div className="relative aspect-video rounded-[2.5rem] overflow-hidden border border-white/10 shadow-2xl group bg-slate-900">
             <AnimatePresence mode="wait">
@@ -260,6 +291,7 @@ export default function BlogDetail() {
             </div>
           )}
         </div>
+        )}
 
         {/* Content Section */}
         <article 
@@ -415,7 +447,9 @@ export default function BlogDetail() {
                             <div className="flex items-center gap-2">
                                <Calendar size={10} className="text-indigo-500" />
                                <span className="text-[9px] text-slate-500 font-bold uppercase tracking-widest">
-                                {new Date(comment.created_at).toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })}
+                                {comment.created_at && !isNaN(new Date(comment.created_at).getTime())
+                                  ? new Date(comment.created_at).toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' })
+                                  : 'Recent'}
                               </span>
                             </div>
                           </div>

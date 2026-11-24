@@ -4,10 +4,52 @@
  */
 
 import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
-import { Suspense, lazy, useEffect } from "react";
+import React, { Component, Suspense, lazy, useEffect } from "react";
 import Home from "./pages/Home";
 import { ProfileProvider } from "./lib/ProfileContext";
 import { recordPageView } from "./lib/viewTracker";
+
+class AppErrorBoundary extends Component<
+  { children: React.ReactNode },
+  { hasError: boolean }
+> {
+  declare readonly props: { children: React.ReactNode };
+  state: { hasError: boolean };
+
+  constructor(props: { children: React.ReactNode }) {
+    super(props);
+    this.state = { hasError: false };
+  }
+
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+
+  componentDidCatch(error: Error) {
+    console.error("Application runtime error:", error);
+  }
+
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="min-h-screen bg-slate-950 text-white flex flex-col items-center justify-center p-6 text-center">
+          <h2 className="text-xl font-bold mb-2">Something went wrong</h2>
+          <p className="text-sm text-slate-400 mb-5 max-w-sm">
+            The page encountered an unexpected issue while loading. Reload to try again.
+          </p>
+          <button
+            type="button"
+            onClick={() => window.location.reload()}
+            className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold transition-colors cursor-pointer"
+          >
+            Reload Page
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 function PageTracker() {
   const location = useLocation();
@@ -47,16 +89,18 @@ export default function App() {
     <ProfileProvider>
       <BrowserRouter>
         <PageTracker />
-        <Suspense fallback={<PageLoader />}>
-          <Routes>
-            <Route path="/admin/*" element={<Admin />} />
-            <Route path="/achievement/:id" element={<AchievementDetail />} />
-            <Route path="/blog/:id" element={<BlogDetail />} />
-            <Route path="/project/:id" element={<ProjectDetail />} />
-            <Route path="/resume" element={<Resume />} />
-            <Route path="*" element={<Home />} />
-          </Routes>
-        </Suspense>
+        <AppErrorBoundary>
+          <Suspense fallback={<PageLoader />}>
+            <Routes>
+              <Route path="/admin/*" element={<Admin />} />
+              <Route path="/achievement/:id" element={<AchievementDetail />} />
+              <Route path="/blog/:id" element={<BlogDetail />} />
+              <Route path="/project/:id" element={<ProjectDetail />} />
+              <Route path="/resume" element={<Resume />} />
+              <Route path="*" element={<Home />} />
+            </Routes>
+          </Suspense>
+        </AppErrorBoundary>
       </BrowserRouter>
     </ProfileProvider>
   );

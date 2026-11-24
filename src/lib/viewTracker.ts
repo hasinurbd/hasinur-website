@@ -17,13 +17,13 @@ const BASE_DEFAULT_VIEWS = 12480;
 
 // Initialize realistic baseline logs if none exist in local storage
 function initializeLogs(): ViewLog[] {
-  const existing = localStorage.getItem(STORAGE_LOGS_KEY);
-  if (existing) {
-    try {
+  try {
+    const existing = localStorage.getItem(STORAGE_LOGS_KEY);
+    if (existing) {
       return JSON.parse(existing);
-    } catch (e) {
-      // Fallback if JSON parse fails
     }
+  } catch (e) {
+    // Fallback if storage access or JSON parse fails
   }
 
   // Generate realistic historical page view timestamps for the last 7 days
@@ -54,10 +54,14 @@ function initializeLogs(): ViewLog[] {
 
   // Sort chronologically
   logs.sort((a, b) => a.ts - b.ts);
-  localStorage.setItem(STORAGE_LOGS_KEY, JSON.stringify(logs));
+  try {
+    localStorage.setItem(STORAGE_LOGS_KEY, JSON.stringify(logs));
 
-  if (!localStorage.getItem(STORAGE_TOTAL_KEY)) {
-    localStorage.setItem(STORAGE_TOTAL_KEY, (BASE_DEFAULT_VIEWS + logs.length).toString());
+    if (!localStorage.getItem(STORAGE_TOTAL_KEY)) {
+      localStorage.setItem(STORAGE_TOTAL_KEY, (BASE_DEFAULT_VIEWS + logs.length).toString());
+    }
+  } catch (e) {
+    // Ignore storage write errors in restricted environments
   }
 
   return logs;
@@ -113,7 +117,12 @@ export async function getViewStats(): Promise<ViewStats> {
   const SEVEN_DAYS = 7 * ONE_DAY;
 
   // Read local total view count
-  const currentTotalStr = localStorage.getItem(STORAGE_TOTAL_KEY);
+  let currentTotalStr: string | null = null;
+  try {
+    currentTotalStr = localStorage.getItem(STORAGE_TOTAL_KEY);
+  } catch (e) {
+    // Ignore storage read errors
+  }
   let localTotal = currentTotalStr ? parseInt(currentTotalStr, 10) : (BASE_DEFAULT_VIEWS + logs.length);
   if (isNaN(localTotal) || localTotal < BASE_DEFAULT_VIEWS) {
     localTotal = BASE_DEFAULT_VIEWS + logs.length;
@@ -133,7 +142,11 @@ export async function getViewStats(): Promise<ViewStats> {
   }
 
   // Ensure local storage maintains the latest total
-  localStorage.setItem(STORAGE_TOTAL_KEY, totalViews.toString());
+  try {
+    localStorage.setItem(STORAGE_TOTAL_KEY, totalViews.toString());
+  } catch (e) {
+    // Ignore storage write errors
+  }
 
   // Filter logs for time windows
   const views24hCount = logs.filter(l => l.ts >= now - ONE_DAY).length;

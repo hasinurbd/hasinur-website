@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
-import { ExternalLink, Calendar, Tag, ArrowLeft, Heart, Share2, FileDown, MessageSquare, ChevronLeft, ChevronRight, Send, Link2, Check } from 'lucide-react';
+import { ExternalLink, Calendar, Tag, ArrowLeft, Heart, Share2, FileDown, MessageSquare, ChevronLeft, ChevronRight, Send, Link2, Check, Globe, Images } from 'lucide-react';
 import { supabase, hasSupabaseConfig } from '../lib/supabaseClient';
 import { getMockData, mockPortfolioItems } from '../lib/mockData';
 import { sanitizeHtml, useDocumentMetadata } from '../lib/utils';
@@ -9,6 +9,7 @@ import { downloadPDF } from '../lib/pdfGenerator';
 import Navbar from '../components/public/Navbar';
 import Footer from '../components/public/Footer';
 import ScrollProgressBar from '../components/public/ScrollProgressBar';
+import { LiveBrowserFrame, isValidWebUrl } from '../components/public/LiveBrowserFrame';
 
 export default function ProjectDetail() {
   const { id } = useParams();
@@ -17,6 +18,7 @@ export default function ProjectDetail() {
   const [project, setProject] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [activeImageIndex, setActiveImageIndex] = useState(0);
+  const [viewMode, setViewMode] = useState<'gallery' | 'live'>('gallery');
 
   // Interaction states
   const [likes, setLikes] = useState(0);
@@ -36,50 +38,71 @@ export default function ProjectDetail() {
   });
 
   useEffect(() => {
+    let isMounted = true;
+
     const fetchProject = async () => {
       setLoading(true);
+      setActiveImageIndex(0);
       try {
-        if (hasSupabaseConfig) {
-          const { data, error } = await supabase.from('portfolio_items').select('*').eq('id', realId).single();
+        let resolved: any = null;
+        if (hasSupabaseConfig && realId) {
+          const { data, error } = await supabase
+            .from('portfolio_items')
+            .select('*')
+            .eq('id', realId)
+            .maybeSingle();
           if (data && !error) {
-            setProject(data);
-            setLikes(data.likes || 0);
-            setComments(data.comments || []);
+            resolved = data;
           }
-        } else {
+        }
+        if (!resolved && realId) {
           const localData = getMockData('mock_portfolio', mockPortfolioItems);
-          const found = localData.find((a: any) => a.id === realId);
-          if (found) {
-            setProject(found);
-            setLikes(found.likes || 0);
-            setComments(found.comments || []);
-          }
+          resolved = localData.find((a: any) => String(a.id) === String(realId)) || null;
+        }
+        if (isMounted && resolved) {
+          setProject(resolved);
+          setLikes(resolved.likes || 0);
+          setComments(Array.isArray(resolved.comments) ? resolved.comments : []);
         }
       } catch (err) {
         console.error('Error fetching project:', err);
+        if (isMounted && realId) {
+          const localData = getMockData('mock_portfolio', mockPortfolioItems);
+          const found = localData.find((a: any) => String(a.id) === String(realId));
+          if (found) {
+            setProject(found);
+            setLikes(found.likes || 0);
+            setComments(Array.isArray(found.comments) ? found.comments : []);
+          }
+        }
       } finally {
-        setLoading(false);
+        if (isMounted) setLoading(false);
       }
     };
 
     fetchProject();
     window.scrollTo(0, 0);
+    return () => {
+      isMounted = false;
+    };
   }, [realId]);
 
   const handleLike = async () => {
     if (isLiked) return;
-    
+
     const newLikes = likes + 1;
     setLikes(newLikes);
     setIsLiked(true);
 
     try {
-      if (hasSupabaseConfig) {
+      const localData = getMockData('mock_portfolio', mockPortfolioItems);
+      const updatedLocalData = localData.map((p: any) =>
+        String(p.id) === String(realId) ? { ...p, likes: newLikes } : p
+      );
+      localStorage.setItem('mock_portfolio', JSON.stringify(updatedLocalData));
+
+      if (hasSupabaseConfig && realId) {
         await supabase.from('portfolio_items').update({ likes: newLikes }).eq('id', realId);
-      } else {
-        const localData = getMockData('mock_portfolio', mockPortfolioItems);
-        const updatedLocalData = localData.map((p: any) => p.id === realId ? { ...p, likes: newLikes } : p);
-        localStorage.setItem('mock_portfolio', JSON.stringify(updatedLocalData));
       }
     } catch (err) {
       console.error('Like error:', err);
@@ -134,32 +157,35 @@ export default function ProjectDetail() {
 
   const handleCommentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!commentName || !commentText) return;
+    if (!commentName.trim() || !commentText.trim()) return;
 
     setIsSubmitting(true);
     const newComment = {
       id: Date.now().toString(),
-      name: commentName,
-      text: commentText,
+      name: commentName.trim(),
+      text: commentText.trim(),
       created_at: new Date().toISOString()
     };
 
     const updatedComments = [newComment, ...comments];
 
     try {
-      if (hasSupabaseConfig) {
+      const localData = getMockData('mock_portfolio', mockPortfolioItems);
+      const updatedLocalData = localData.map((p: any) =>
+        String(p.id) === String(realId) ? { ...p, comments: updatedComments } : p
+      );
+      localStorage.setItem('mock_portfolio', JSON.stringify(updatedLocalData));
+
+      if (hasSupabaseConfig && realId) {
         const { error } = await supabase
           .from('portfolio_items')
           .update({ comments: updatedComments })
           .eq('id', realId);
-        
-        if (error) throw error;
-      } else {
-        const localData = getMockData('mock_portfolio', mockPortfolioItems);
-        const updatedLocalData = localData.map((p: any) => p.id === realId ? { ...p, comments: updatedComments } : p);
-        localStorage.setItem('mock_portfolio', JSON.stringify(updatedLocalData));
+        if (error) {
+          console.warn('Supabase comment sync skipped:', error.message);
+        }
       }
-      
+
       setComments(updatedComments);
       setCommentText('');
       setCommentName('');
@@ -208,58 +234,114 @@ export default function ProjectDetail() {
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-12">
             {/* Main Visuals - 7 Columns */}
           <div className="lg:col-span-12 xl:col-span-7 space-y-6">
-            <div className="relative aspect-video rounded-3xl overflow-hidden border border-white/10 shadow-2xl group bg-slate-900 print:rounded-none print:border-none flex items-center justify-center">
-              {/* Premium blurred backdrop to fill aspect ratio gaps beautifully without cropping any custom aspect ratio images */}
-              <div 
-                className="absolute inset-0 bg-cover bg-center filter blur-2xl opacity-30 pointer-events-none scale-110 transition-all duration-500"
-                style={{ backgroundImage: `url(${gallery[activeImageIndex]})` }}
-              />
-
-              <AnimatePresence mode="wait">
-                <motion.img
-                  key={activeImageIndex}
-                  src={gallery[activeImageIndex]}
-                  alt={project.title}
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.95 }}
-                  transition={{ duration: 0.4 }}
-                  className="w-full h-full object-contain relative z-10 p-3"
-                />
-              </AnimatePresence>
-              
-              {gallery.length > 1 && (
-                <>
-                  <button 
-                    onClick={() => setActiveImageIndex(prev => (prev - 1 + gallery.length) % gallery.length)}
-                    className="absolute left-4 top-1/2 -translate-y-1/2 p-2 bg-black/50 backdrop-blur-md rounded-full text-white hover:bg-blue-600 transition-colors print:hidden"
-                  >
-                    <ChevronLeft size={20} />
-                  </button>
-                  <button 
-                    onClick={() => setActiveImageIndex(prev => (prev + 1) % gallery.length)}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 p-2 bg-black/50 backdrop-blur-md rounded-full text-white hover:bg-blue-600 transition-colors print:hidden"
-                  >
-                    <ChevronRight size={20} />
-                  </button>
-                </>
-              )}
-            </div>
-
-            {gallery.length > 1 && (
-              <div className="flex gap-3 overflow-x-auto pb-2 custom-scrollbar print:hidden">
-                {gallery.map((url: string, index: number) => (
+            {isValidWebUrl(project.link) && (
+              <div className="flex items-center justify-between gap-3 print:hidden">
+                <div
+                  role="tablist"
+                  aria-label="Project showcase mode"
+                  className="inline-flex items-center gap-1 p-1 rounded-xl bg-slate-900 border border-white/10"
+                >
                   <button
-                    key={index}
-                    onClick={() => setActiveImageIndex(index)}
-                    className={`relative w-24 h-24 shrink-0 rounded-xl overflow-hidden border-2 transition-all ${
-                      activeImageIndex === index ? 'border-blue-500 scale-105' : 'border-white/5 opacity-50 hover:opacity-100'
+                    type="button"
+                    role="tab"
+                    aria-selected={viewMode === 'gallery'}
+                    onClick={() => setViewMode('gallery')}
+                    className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-colors whitespace-nowrap ${
+                      viewMode === 'gallery'
+                        ? 'bg-blue-600 text-white'
+                        : 'text-slate-400 hover:text-white'
                     }`}
                   >
-                    <img src={url} alt={`Gallery ${index}`} className="w-full h-full object-cover" />
+                    <Images size={14} />
+                    <span>Gallery</span>
                   </button>
-                ))}
+                  <button
+                    type="button"
+                    role="tab"
+                    aria-selected={viewMode === 'live'}
+                    onClick={() => setViewMode('live')}
+                    className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-lg text-xs font-semibold transition-colors whitespace-nowrap ${
+                      viewMode === 'live'
+                        ? 'bg-blue-600 text-white'
+                        : 'text-slate-400 hover:text-white'
+                    }`}
+                  >
+                    <Globe size={14} />
+                    <span>Live Web View</span>
+                  </button>
+                </div>
               </div>
+            )}
+
+            {viewMode === 'live' && isValidWebUrl(project.link) ? (
+              <div className="print:hidden">
+                <LiveBrowserFrame
+                  url={project.link}
+                  title={project.title}
+                  heightClass="h-[460px] md:h-[540px]"
+                />
+              </div>
+            ) : (
+              <>
+                <div className="relative aspect-video rounded-3xl overflow-hidden border border-white/10 shadow-2xl group bg-slate-900 print:rounded-none print:border-none flex items-center justify-center">
+                  {gallery.length > 0 ? (
+                    <>
+                      <div 
+                        className="absolute inset-0 bg-cover bg-center filter blur-2xl opacity-30 pointer-events-none scale-110 transition-all duration-500"
+                        style={{ backgroundImage: `url(${gallery[activeImageIndex]})` }}
+                      />
+
+                      <AnimatePresence mode="wait">
+                        <motion.img
+                          key={activeImageIndex}
+                          src={gallery[activeImageIndex]}
+                          alt={project.title}
+                          initial={{ opacity: 0, scale: 0.95 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          exit={{ opacity: 0, scale: 0.95 }}
+                          transition={{ duration: 0.4 }}
+                          className="w-full h-full object-contain relative z-10 p-3"
+                        />
+                      </AnimatePresence>
+                    </>
+                  ) : (
+                    <span className="text-slate-500 text-xs uppercase tracking-widest font-bold">No preview image</span>
+                  )}
+                  
+                  {gallery.length > 1 && (
+                    <>
+                      <button 
+                        onClick={() => setActiveImageIndex(prev => (prev - 1 + gallery.length) % gallery.length)}
+                        className="absolute left-4 top-1/2 -translate-y-1/2 p-2 bg-black/50 backdrop-blur-md rounded-full text-white hover:bg-blue-600 transition-colors print:hidden"
+                      >
+                        <ChevronLeft size={20} />
+                      </button>
+                      <button 
+                        onClick={() => setActiveImageIndex(prev => (prev + 1) % gallery.length)}
+                        className="absolute right-4 top-1/2 -translate-y-1/2 p-2 bg-black/50 backdrop-blur-md rounded-full text-white hover:bg-blue-600 transition-colors print:hidden"
+                      >
+                        <ChevronRight size={20} />
+                      </button>
+                    </>
+                  )}
+                </div>
+
+                {gallery.length > 1 && (
+                  <div className="flex gap-3 overflow-x-auto pb-2 custom-scrollbar print:hidden">
+                    {gallery.map((url: string, index: number) => (
+                      <button
+                        key={index}
+                        onClick={() => setActiveImageIndex(index)}
+                        className={`relative w-24 h-24 shrink-0 rounded-xl overflow-hidden border-2 transition-all ${
+                          activeImageIndex === index ? 'border-blue-500 scale-105' : 'border-white/5 opacity-50 hover:opacity-100'
+                        }`}
+                      >
+                        <img src={url} alt={`Gallery ${index}`} className="w-full h-full object-cover" />
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </>
             )}
 
             {/* Print Only Title Section */}
@@ -464,7 +546,9 @@ export default function ProjectDetail() {
                               <div className="flex items-center gap-2">
                                 <Calendar size={10} className="text-blue-500" />
                                 <span className="text-[9px] text-slate-500 uppercase tracking-widest font-black">
-                                  {new Date(comment.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                                  {comment.created_at && !isNaN(new Date(comment.created_at).getTime())
+                                    ? new Date(comment.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
+                                    : 'Recent'}
                                 </span>
                               </div>
                             </div>

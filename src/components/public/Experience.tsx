@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Briefcase, GraduationCap, ChevronRight, Palette, CheckCircle2 } from 'lucide-react';
+import { Briefcase, GraduationCap, Palette, CheckCircle2 } from 'lucide-react';
 import { getMockData, mockExperiences } from '../../lib/mockData';
 import { supabase, hasSupabaseConfig } from '../../lib/supabaseClient';
 import { cn, sanitizeHtml } from '../../lib/utils';
@@ -13,20 +13,31 @@ export default function Experience() {
   const [filter, setFilter] = useState<FilterType>('all');
 
   useEffect(() => {
-    if (hasSupabaseConfig) {
-      const fetchExp = async () => {
+    if (!hasSupabaseConfig) return;
+    let isMounted = true;
+
+    const fetchExp = async () => {
+      try {
         const { data, error } = await supabase
           .from('experiences')
           .select('*')
           .order('created_at', { ascending: false });
+        if (!isMounted) return;
         if (data && !error && data.length > 0) {
           setExperiences(data);
         } else {
           setExperiences(getMockData('mock_experiences', mockExperiences));
         }
-      };
-      fetchExp();
-    }
+      } catch (err) {
+        console.error('Error fetching experiences:', err);
+        if (isMounted) setExperiences(getMockData('mock_experiences', mockExperiences));
+      }
+    };
+
+    fetchExp();
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   const categoriesOrder = ['all', 'education', 'professional', 'club'];
@@ -120,7 +131,7 @@ export default function Experience() {
   };
 
   return (
-    <section id="experience" className="relative py-16 px-4 max-w-6xl mx-auto overflow-hidden">
+    <section id="experience" className="relative py-16 lg:py-20 px-4 max-w-6xl mx-auto overflow-hidden">
       <BackgroundBlobs />
       
       <div className="absolute inset-0 pointer-events-none">
@@ -130,15 +141,16 @@ export default function Experience() {
       </div>
 
       <div className="relative z-10">
-        <div className="text-center mb-16">
+        <div className="text-center mb-14">
           <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            whileInView={{ opacity: 1, scale: 1 }}
+            initial={{ opacity: 0, y: 14 }}
+            whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
+            transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}
           >
-            <span className="text-blue-500 font-bold tracking-[0.3em] uppercase text-xs mb-3 block">My Journey</span>
-            <h2 className="text-3xl md:text-4xl font-black mb-4 tracking-tight text-white leading-tight uppercase pb-4">Professional Path</h2>
-            <div className="w-10 h-1 bg-blue-600 mx-auto rounded-full shadow-[0_0_15px_rgba(37,99,235,0.6)]"></div>
+            <span className="text-blue-400 font-semibold tracking-[0.28em] uppercase text-[11px] mb-3 block">My Journey</span>
+            <h2 className="text-3xl sm:text-4xl lg:text-[42px] font-black mb-4 tracking-tight text-white leading-tight">Professional Path</h2>
+            <div className="w-12 h-0.5 bg-gradient-to-r from-blue-600 via-indigo-500 to-cyan-400 mx-auto rounded-full"></div>
           </motion.div>
         </div>
 
@@ -175,8 +187,8 @@ export default function Experience() {
                 initial={{ opacity: 0, y: 20 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, scale: 0.95 }}
-                viewport={{ once: true, margin: "-50px" }}
-                transition={{ duration: 0.4, delay: index * 0.05 }}
+                viewport={{ once: true, amount: 0.05 }}
+                transition={{ duration: 0.35, delay: Math.min(index * 0.05, 0.2) }}
                 className={cn(
                   "relative flex flex-col md:flex-row items-start md:items-center w-full md:mb-12 last:mb-0",
                   index % 2 === 0 ? "md:flex-row" : "md:flex-row-reverse"
@@ -187,6 +199,7 @@ export default function Experience() {
                    <motion.div
                      initial={{ opacity: 0, x: index % 2 === 0 ? -10 : 10 }}
                      whileInView={{ opacity: 1, x: 0 }}
+                     viewport={{ once: true, amount: 0.05 }}
                      transition={{ delay: 0.1 }}
                    >
                      {formatDateRange(exp.date_range, index % 2 === 0 ? 'right' : 'left')}
@@ -204,7 +217,7 @@ export default function Experience() {
 
                 {/* Content Card */}
                 <div className={cn("w-full pl-[65px] pr-4 md:px-0 md:w-1/2", index % 2 === 0 ? "md:pl-12" : "md:pr-12")}>
-                  <div className="bg-gradient-to-br from-slate-900/40 to-slate-950/40 backdrop-blur-2xl border border-white/5 hover:border-blue-500/30 p-4 md:p-6 rounded-2xl transition-all duration-500 group hover:shadow-[0_10px_30px_rgba(0,0,0,0.2)] relative overflow-hidden">
+                  <div className="bg-slate-900/45 backdrop-blur-md border border-white/[0.08] hover:border-blue-500/40 p-5 md:p-6 rounded-2xl transition-all duration-300 group shadow-[0_1px_0_0_rgba(255,255,255,0.04)_inset,0_20px_40px_-20px_rgba(0,0,0,0.6)] relative overflow-hidden">
                     <div className="absolute top-0 right-0 w-24 h-24 bg-blue-600/5 rounded-full blur-[30px] -mr-12 -mt-12 pointer-events-none"></div>
                     
                     <div className="flex flex-col gap-3">
@@ -256,6 +269,7 @@ export default function Experience() {
                               key={i} 
                               initial={{ opacity: 0, y: 5 }}
                               whileInView={{ opacity: 1, y: 0 }}
+                              viewport={{ once: true, amount: 0.05 }}
                               transition={{ delay: 0.1 + i * 0.05 }}
                               className={cn(
                                 "flex items-start gap-3 p-3 rounded-xl bg-white/[0.015] border border-white/5 hover:border-blue-500/10 hover:bg-blue-500/[0.02] transition-all group/item",
@@ -295,10 +309,10 @@ function FilterButton({ active, onClick, children }: FilterButtonProps) {
     <button 
       onClick={onClick}
       className={cn(
-        "px-8 py-2.5 rounded-2xl text-xs font-black uppercase tracking-[0.2em] transition-all duration-300 backdrop-blur-md border",
+        "px-5 py-2.5 rounded-xl text-xs font-semibold uppercase tracking-wider transition-all duration-200 backdrop-blur-md border cursor-pointer",
         active 
-          ? "bg-blue-600 text-white border-blue-500 shadow-[0_8px_20px_rgba(37,99,235,0.3)] scale-105" 
-          : "bg-slate-900/50 text-slate-500 border-white/5 hover:border-white/20 hover:text-white"
+          ? "bg-blue-600 text-white border-blue-500 shadow-[0_8px_24px_rgba(37,99,235,0.35)]" 
+          : "bg-slate-900/60 text-slate-400 border-white/[0.08] hover:border-white/20 hover:text-white"
       )}
     >
       {children}

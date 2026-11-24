@@ -68,8 +68,8 @@ async function urlToBase64(url: string): Promise<string | null> {
 }
 
 export async function downloadPDF(
-  elementId: string, 
-  title: string, 
+  _elementId: string,
+  title: string,
   exportData?: PDFExportData
 ): Promise<boolean> {
   const safeFilename = (title || 'document').toLowerCase().replace(/[^a-z0-9]/g, '_').slice(0, 50) || 'document';

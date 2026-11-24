@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { LogOut, Home, User, Briefcase, FileImage, Award, Save, Plus, Trash2, Mail, FileText, Upload, BarChart3, Users, Eye, MousePointerClick, Heart, MessageSquare, ArrowLeft, ArrowRight, ChevronLeft, ChevronRight, X, Layers } from 'lucide-react';
+import React, { useState, useEffect, useMemo } from 'react';
+import { LogOut, Home, User, Briefcase, FileImage, Award, Save, Plus, Trash2, Mail, FileText, Upload, BarChart3, Users, Eye, MousePointerClick, Heart, MessageSquare, ChevronLeft, ChevronRight, X, Layers } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { supabase, hasSupabaseConfig, uploadAsset } from '../../lib/supabaseClient';
 import { getMockProfile, saveMockProfile, getMockData, saveMockData, mockExperiences, mockPortfolioItems, mockAchievements, mockBlogs, defaultMockProfile, mockReviews, mockClients, mockMessages } from '../../lib/mockData';
@@ -22,7 +22,7 @@ const generateUUID = () => {
   });
 };
 
-export default function AdminDashboard({ session }: { session: any }) {
+export default function AdminDashboard({ session: _session }: { session: any }) {
   const navigate = useNavigate();
   const location = useLocation();
   const { profile, refreshProfile } = useProfile();
@@ -511,8 +511,8 @@ export default function AdminDashboard({ session }: { session: any }) {
             <input type="text" value={profileData.behance_url || ''} onChange={e => setProfileData({...profileData, behance_url: e.target.value})} className="w-full bg-slate-800/50 border border-white/10 rounded-xl px-4 py-2 text-white text-sm focus:outline-none focus:border-blue-500 transition-colors" />
           </div>
           <div>
-            <label className="block text-xs font-medium text-slate-500 mb-1">Twitter URL</label>
-            <input type="text" value={profileData.twitter_url || ''} onChange={e => setProfileData({...profileData, twitter_url: e.target.value})} className="w-full bg-slate-800/50 border border-white/10 rounded-xl px-4 py-2 text-white text-sm focus:outline-none focus:border-blue-500 transition-colors" />
+            <label className="block text-xs font-medium text-slate-500 mb-1">GitHub URL</label>
+            <input type="text" value={profileData.github_url || ''} onChange={e => setProfileData({...profileData, github_url: e.target.value})} placeholder="https://github.com/hasinurbd" className="w-full bg-slate-800/50 border border-white/10 rounded-xl px-4 py-2 text-white text-sm focus:outline-none focus:border-blue-500 transition-colors" />
           </div>
           <div>
             <label className="block text-xs font-medium text-slate-500 mb-1">YouTube URL</label>
@@ -572,7 +572,9 @@ export default function AdminDashboard({ session }: { session: any }) {
                 <a href={`mailto:${msg.email}`} className="text-xs text-blue-400 hover:underline">{msg.email}</a>
               </div>
               <div className="flex items-center gap-3">
-                <span className="text-[11px] text-slate-500">{new Date(msg.created_at).toLocaleString()}</span>
+                <span className="text-[11px] text-slate-500">
+                  {msg.created_at && !isNaN(new Date(msg.created_at).getTime()) ? new Date(msg.created_at).toLocaleString() : ''}
+                </span>
                 <button
                   type="button"
                   onClick={() => deleteItem(msg.id)}
@@ -599,9 +601,14 @@ export default function AdminDashboard({ session }: { session: any }) {
 
   useEffect(() => {
     if (activeTab === 'dashboard') {
+      let isMounted = true;
       const updateViews = async () => {
-        const stats = await getViewStats();
-        setViewStats(stats);
+        try {
+          const stats = await getViewStats();
+          if (isMounted) setViewStats(stats);
+        } catch (e) {
+          // Ignore transient view stats error
+        }
       };
       updateViews();
 
@@ -616,6 +623,7 @@ export default function AdminDashboard({ session }: { session: any }) {
       const interval = setInterval(updateViews, 4000);
 
       return () => {
+        isMounted = false;
         window.removeEventListener('page_view_recorded', handlePageViewRecorded);
         window.removeEventListener('storage', handlePageViewRecorded);
         clearInterval(interval);
@@ -626,11 +634,6 @@ export default function AdminDashboard({ session }: { session: any }) {
   const maxVisits = useMemo(() => {
     if (!viewStats.hourly24h.length) return 0;
     return Math.max(...viewStats.hourly24h.map(d => d.visitors));
-  }, [viewStats.hourly24h]);
-
-  const totalPageViews = useMemo(() => {
-    if (!viewStats.hourly24h.length) return 0;
-    return viewStats.hourly24h.reduce((sum, d) => sum + d.pageViews, 0);
   }, [viewStats.hourly24h]);
 
   const [stats, setStats] = useState({
@@ -766,8 +769,10 @@ export default function AdminDashboard({ session }: { session: any }) {
       { name: 'Reviews', value: stats.reviews, fill: '#8b5cf6' },
     ];
 
-    const getTimeAgo = (dateStr: string) => {
+    const getTimeAgo = (dateStr?: string) => {
+      if (!dateStr) return 'Recently';
       const date = new Date(dateStr);
+      if (Number.isNaN(date.getTime())) return 'Recently';
       const now = new Date();
       const diffMs = now.getTime() - date.getTime();
       const diffMins = Math.floor(diffMs / 60000);
@@ -1219,7 +1224,7 @@ export default function AdminDashboard({ session }: { session: any }) {
                   </div>
                   <div>
                     <label className="block text-[10px] uppercase font-black text-slate-500 mb-1 ml-1">Project Date</label>
-                    <input type="date" value={item.start_date ? item.start_date.split('T')[0] : ''} onChange={e => updateItem(item.id, 'start_date', new Date(e.target.value).toISOString())} className="w-full bg-slate-900/50 border border-white/10 rounded-lg px-3 py-2 text-white text-sm" />
+                    <input type="date" value={item.start_date ? item.start_date.split('T')[0] : ''} onChange={e => updateItem(item.id, 'start_date', e.target.value && !isNaN(new Date(e.target.value).getTime()) ? new Date(e.target.value).toISOString() : '')} className="w-full bg-slate-900/50 border border-white/10 rounded-lg px-3 py-2 text-white text-sm" />
                   </div>
                   <div>
                     <label className="block text-[10px] uppercase font-black text-slate-500 mb-1 ml-1">Live Link / Source</label>
@@ -1619,7 +1624,7 @@ export default function AdminDashboard({ session }: { session: any }) {
                 <div className="flex gap-4">
                   <div className="flex-1">
                     <label className="block text-[10px] uppercase font-black text-slate-500 mb-1 ml-1">Date Achieved</label>
-                    <input type="date" value={item.date ? item.date.split('T')[0] : ''} onChange={e => updateItem(item.id, 'date', new Date(e.target.value).toISOString())} className="w-full bg-slate-900/50 border border-white/10 rounded-lg px-3 py-2 text-white text-sm" />
+                    <input type="date" value={item.date ? item.date.split('T')[0] : ''} onChange={e => updateItem(item.id, 'date', e.target.value && !isNaN(new Date(e.target.value).getTime()) ? new Date(e.target.value).toISOString() : '')} className="w-full bg-slate-900/50 border border-white/10 rounded-lg px-3 py-2 text-white text-sm" />
                   </div>
                       <div 
                         onDragOver={(e) => {
@@ -1898,7 +1903,7 @@ export default function AdminDashboard({ session }: { session: any }) {
                   </div>
                   <div className="w-48">
                      <label className="block text-[10px] uppercase font-black text-slate-500 mb-1 ml-1">Publish Date</label>
-                     <input type="date" value={item.published_at ? item.published_at.split('T')[0] : ''} onChange={e => updateItem(item.id, 'published_at', new Date(e.target.value).toISOString())} className="w-full bg-slate-900/50 border border-white/10 rounded-lg px-3 py-2 text-white text-sm" />
+                     <input type="date" value={item.published_at ? item.published_at.split('T')[0] : ''} onChange={e => updateItem(item.id, 'published_at', e.target.value && !isNaN(new Date(e.target.value).getTime()) ? new Date(e.target.value).toISOString() : '')} className="w-full bg-slate-900/50 border border-white/10 rounded-lg px-3 py-2 text-white text-sm" />
                   </div>
                 </div>
                 <JoditEditor value={item.content || ''} config={editorConfig} onBlur={newContent => updateItem(item.id, 'content', newContent)} />
@@ -2023,8 +2028,14 @@ export default function AdminDashboard({ session }: { session: any }) {
                             
                             // Update internal start_date for sorting
                             const monthIdx = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'].indexOf(month);
-                            const d = new Date(parseInt(year), monthIdx, parseInt(day));
-                            updateItem(item.id, 'start_date', d.toISOString());
+                            const parsedYear = parseInt(year, 10);
+                            const parsedDay = parseInt(day, 10);
+                            if (monthIdx >= 0 && !Number.isNaN(parsedYear) && parsedYear >= 1900 && !Number.isNaN(parsedDay)) {
+                              const d = new Date(parsedYear, monthIdx, parsedDay);
+                              if (!Number.isNaN(d.getTime())) {
+                                updateItem(item.id, 'start_date', d.toISOString());
+                              }
+                            }
                           }}
                           className="bg-slate-900/50 border border-white/10 rounded-lg py-1.5 text-white text-[10px] w-12 text-center"
                         >
@@ -2043,8 +2054,14 @@ export default function AdminDashboard({ session }: { session: any }) {
 
                             // Update internal start_date for sorting
                             const monthIdx = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'].indexOf(month);
-                            const d = new Date(parseInt(year), monthIdx, parseInt(day));
-                            updateItem(item.id, 'start_date', d.toISOString());
+                            const parsedYear = parseInt(year, 10);
+                            const parsedDay = parseInt(day, 10);
+                            if (monthIdx >= 0 && !Number.isNaN(parsedYear) && parsedYear >= 1900 && !Number.isNaN(parsedDay)) {
+                              const d = new Date(parsedYear, monthIdx, parsedDay);
+                              if (!Number.isNaN(d.getTime())) {
+                                updateItem(item.id, 'start_date', d.toISOString());
+                              }
+                            }
                           }}
                           className="bg-slate-900/50 border border-white/10 rounded-lg py-1.5 text-white text-[10px] flex-1 text-center"
                         >
@@ -2065,8 +2082,14 @@ export default function AdminDashboard({ session }: { session: any }) {
 
                             // Update internal start_date for sorting
                             const monthIdx = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'].indexOf(month);
-                            const d = new Date(parseInt(year) || new Date().getFullYear(), monthIdx, parseInt(day));
-                            updateItem(item.id, 'start_date', d.toISOString());
+                            const parsedYear = parseInt(year, 10) || new Date().getFullYear();
+                            const parsedDay = parseInt(day, 10) || 1;
+                            if (monthIdx >= 0 && parsedYear >= 1900 && parsedYear <= 2100) {
+                              const d = new Date(parsedYear, monthIdx, parsedDay);
+                              if (!Number.isNaN(d.getTime())) {
+                                updateItem(item.id, 'start_date', d.toISOString());
+                              }
+                            }
                           }}
                           className="bg-slate-900/50 border border-white/10 rounded-lg px-2 py-1.5 text-white text-[10px] w-16 text-center"
                         />

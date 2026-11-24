@@ -14,45 +14,68 @@ export default function Resume() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let isMounted = true;
+
     const fetchResumeData = async () => {
       setLoading(true);
       try {
+        let resolvedProfile: any = null;
+        let resolvedExperiences: any[] | null = null;
+        let resolvedProjects: any[] | null = null;
+        let resolvedAchievements: any[] | null = null;
+
         if (hasSupabaseConfig) {
-          // Fetch profile
-          const { data: prof } = await supabase.from('profiles').select('*').single();
-          if (prof) {
-            const sanitized = { ...prof };
-            if (sanitized.phone === "+8801518914773" || sanitized.phone === "01518914773" || (sanitized.phone && sanitized.phone.includes("1518914773"))) {
-              sanitized.phone = "+8801647706099";
+          const [profRes, expRes, projRes, achRes] = await Promise.all([
+            supabase.from('profile_info').select('*').limit(1).maybeSingle(),
+            supabase.from('experiences').select('*').order('id', { ascending: true }),
+            supabase.from('portfolio_items').select('*').order('likes', { ascending: false }),
+            supabase.from('achievements').select('*').order('date', { ascending: false }),
+          ]);
+
+          if (profRes.data && !profRes.error) {
+            const sanitized = { ...profRes.data };
+            if (
+              sanitized.phone === '+8801518914773' ||
+              sanitized.phone === '01518914773' ||
+              (sanitized.phone && sanitized.phone.includes('1518914773'))
+            ) {
+              sanitized.phone = '+8801647706099';
             }
-            setProfile(sanitized);
+            resolvedProfile = sanitized;
           }
+          if (expRes.data && !expRes.error && expRes.data.length > 0) {
+            resolvedExperiences = expRes.data;
+          }
+          if (projRes.data && !projRes.error && projRes.data.length > 0) {
+            resolvedProjects = projRes.data;
+          }
+          if (achRes.data && !achRes.error && achRes.data.length > 0) {
+            resolvedAchievements = achRes.data;
+          }
+        }
 
-          // Fetch experiences
-          const { data: exps } = await supabase.from('experiences').select('*').order('id', { ascending: true });
-          if (exps) setExperiences(exps);
-
-          // Fetch projects
-          const { data: projs } = await supabase.from('portfolio_items').select('*').order('likes', { ascending: false });
-          if (projs) setProjects(projs);
-
-          // Fetch achievements
-          const { data: achs } = await supabase.from('achievements').select('*').order('date', { ascending: false });
-          if (achs) setAchievements(achs);
-        } else {
+        if (!isMounted) return;
+        setProfile(resolvedProfile || getMockProfile());
+        setExperiences(resolvedExperiences || getMockData('mock_experiences', mockExperiences));
+        setProjects(resolvedProjects || getMockData('mock_portfolio', mockPortfolioItems));
+        setAchievements(resolvedAchievements || getMockData('mock_achievements', mockAchievements));
+      } catch (err) {
+        console.error('Error fetching resume data:', err);
+        if (isMounted) {
           setProfile(getMockProfile());
           setExperiences(getMockData('mock_experiences', mockExperiences));
           setProjects(getMockData('mock_portfolio', mockPortfolioItems));
           setAchievements(getMockData('mock_achievements', mockAchievements));
         }
-      } catch (err) {
-        console.error('Error fetching resume data:', err);
       } finally {
-        setLoading(false);
+        if (isMounted) setLoading(false);
       }
     };
 
     fetchResumeData();
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   // Automatically trigger printer setup shortly after loading completes
@@ -95,7 +118,7 @@ export default function Resume() {
       {/* Top sticky action control (hidden during printing) */}
       <div className="print:hidden bg-slate-900/90 backdrop-blur-md border-b border-white/10 py-4 px-6 fixed top-0 left-0 right-0 z-50 flex justify-between items-center max-w-full">
         <button 
-          onClick={() => navigate(-1)} 
+          onClick={() => (window.history.length > 1 ? navigate(-1) : navigate('/'))} 
           className="inline-flex items-center gap-2 text-slate-400 hover:text-white transition-colors text-xs font-black uppercase tracking-widest"
         >
           <ArrowLeft size={16} />
@@ -229,7 +252,10 @@ export default function Resume() {
                 <div key={proj.id} className="space-y-1 border-l-2 border-slate-200 pl-3">
                   <h3 className="text-xs font-black text-slate-900 uppercase">{proj.title}</h3>
                   <p className="text-[10px] text-blue-600 font-bold uppercase tracking-wider">{proj.category}</p>
-                  <p className="text-[10px] text-slate-500 print:text-slate-800 font-medium line-clamp-2 leading-relaxed">{proj.description}</p>
+                  <div
+                    className="text-[10px] text-slate-500 print:text-slate-800 font-medium line-clamp-2 leading-relaxed"
+                    dangerouslySetInnerHTML={{ __html: sanitizeHtml(proj.description || '') }}
+                  />
                 </div>
               ))}
             </div>
@@ -248,7 +274,10 @@ export default function Resume() {
                     <div className="flex justify-between items-baseline gap-2">
                       <h3 className="text-xs font-black text-slate-900 uppercase leading-none">{ach.title}</h3>
                       <span className="text-[8px] font-bold text-slate-400 uppercase shrink-0">
-                        {new Date(ach.date).getFullYear()}
+                        {(() => {
+                          const d = ach.date ? new Date(ach.date) : null;
+                          return d && !isNaN(d.getTime()) ? d.getFullYear() : '';
+                        })()}
                       </span>
                     </div>
                     {ach.author && (

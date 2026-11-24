@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { Award, Calendar, User, ArrowLeft, Send, MessageSquare, ChevronLeft, ChevronRight, Heart, Share2, FileDown, Link2, Check } from 'lucide-react';
@@ -36,34 +36,53 @@ export default function AchievementDetail() {
   });
 
   useEffect(() => {
+    let isMounted = true;
+
     const fetchAchievement = async () => {
       setLoading(true);
+      setActiveImageIndex(0);
       try {
-        if (hasSupabaseConfig) {
-          const { data, error } = await supabase.from('achievements').select('*').eq('id', realId).single();
+        let resolved: any = null;
+        if (hasSupabaseConfig && realId) {
+          const { data, error } = await supabase
+            .from('achievements')
+            .select('*')
+            .eq('id', realId)
+            .maybeSingle();
           if (data && !error) {
-            setAchievement(data);
-            setLikes(data.likes || 0);
-            setComments(data.comments || []);
+            resolved = data;
           }
-        } else {
+        }
+        if (!resolved && realId) {
           const localData = getMockData('mock_achievements', mockAchievements);
-          const found = localData.find((a: any) => a.id === realId);
-          if (found) {
-            setAchievement(found);
-            setLikes(found.likes || 0);
-            setComments(found.comments || []);
-          }
+          resolved = localData.find((a: any) => String(a.id) === String(realId)) || null;
+        }
+        if (isMounted && resolved) {
+          setAchievement(resolved);
+          setLikes(resolved.likes || 0);
+          setComments(Array.isArray(resolved.comments) ? resolved.comments : []);
         }
       } catch (err) {
         console.error('Error fetching achievement:', err);
+        if (isMounted && realId) {
+          const localData = getMockData('mock_achievements', mockAchievements);
+          const found = localData.find((a: any) => String(a.id) === String(realId));
+          if (found) {
+            setAchievement(found);
+            setLikes(found.likes || 0);
+            setComments(Array.isArray(found.comments) ? found.comments : []);
+          }
+        }
       } finally {
-        setLoading(false);
+        if (isMounted) setLoading(false);
       }
     };
 
     fetchAchievement();
     window.scrollTo(0, 0);
+    return () => {
+      isMounted = false;
+    };
   }, [realId]);
 
   const handleLike = async () => {
@@ -72,12 +91,14 @@ export default function AchievementDetail() {
     setLikes(newLikes);
     setIsLiked(true);
     try {
-      if (hasSupabaseConfig) {
+      const localData = getMockData('mock_achievements', mockAchievements);
+      const updatedLocalData = localData.map((a: any) =>
+        String(a.id) === String(realId) ? { ...a, likes: newLikes } : a
+      );
+      localStorage.setItem('mock_achievements', JSON.stringify(updatedLocalData));
+
+      if (hasSupabaseConfig && realId) {
         await supabase.from('achievements').update({ likes: newLikes }).eq('id', realId);
-      } else {
-        const localData = getMockData('mock_achievements', mockAchievements);
-        const updatedLocalData = localData.map((a: any) => a.id === realId ? { ...a, likes: newLikes } : a);
-        localStorage.setItem('mock_achievements', JSON.stringify(updatedLocalData));
       }
     } catch (err) { console.error(err); }
   };
@@ -126,32 +147,35 @@ export default function AchievementDetail() {
 
   const handleCommentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!commentName || !commentText) return;
+    if (!commentName.trim() || !commentText.trim()) return;
 
     setIsSubmitting(true);
     const newComment = {
       id: Date.now().toString(),
-      name: commentName,
-      text: commentText,
+      name: commentName.trim(),
+      text: commentText.trim(),
       created_at: new Date().toISOString()
     };
 
     const updatedComments = [newComment, ...comments];
 
     try {
-      if (hasSupabaseConfig) {
+      const localData = getMockData('mock_achievements', mockAchievements);
+      const updatedLocalData = localData.map((a: any) =>
+        String(a.id) === String(realId) ? { ...a, comments: updatedComments } : a
+      );
+      localStorage.setItem('mock_achievements', JSON.stringify(updatedLocalData));
+
+      if (hasSupabaseConfig && realId) {
         const { error } = await supabase
           .from('achievements')
           .update({ comments: updatedComments })
           .eq('id', realId);
-        
-        if (error) throw error;
-      } else {
-        const localData = getMockData('mock_achievements', mockAchievements);
-        const updatedLocalData = localData.map((a: any) => a.id === realId ? { ...a, comments: updatedComments } : a);
-        localStorage.setItem('mock_achievements', JSON.stringify(updatedLocalData));
+        if (error) {
+          console.warn('Supabase comment sync skipped:', error.message);
+        }
       }
-      
+
       setComments(updatedComments);
       setCommentText('');
       setCommentName('');
@@ -197,24 +221,29 @@ export default function AchievementDetail() {
           {/* Left Side: Images */}
           <div className="space-y-6">
             <div className="relative aspect-square rounded-3xl overflow-hidden border border-white/10 shadow-2xl group bg-slate-900/50 flex items-center justify-center">
-              {/* Premium blurred backdrop to fill aspect ratio gaps beautifully without cropping the square poster */}
-              <div 
-                className="absolute inset-0 bg-cover bg-center filter blur-2xl opacity-30 pointer-events-none scale-110 transition-all duration-500"
-                style={{ backgroundImage: `url(${gallery[activeImageIndex]})` }}
-              />
-              
-              <AnimatePresence mode="wait">
-                <motion.img
-                  key={activeImageIndex}
-                  src={gallery[activeImageIndex]}
-                  alt={achievement.title}
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.95 }}
-                  transition={{ duration: 0.4 }}
-                  className="w-full h-full object-contain relative z-10 p-3"
-                />
-              </AnimatePresence>
+              {gallery.length > 0 ? (
+                <>
+                  <div 
+                    className="absolute inset-0 bg-cover bg-center filter blur-2xl opacity-30 pointer-events-none scale-110 transition-all duration-500"
+                    style={{ backgroundImage: `url(${gallery[activeImageIndex]})` }}
+                  />
+                  
+                  <AnimatePresence mode="wait">
+                    <motion.img
+                      key={activeImageIndex}
+                      src={gallery[activeImageIndex]}
+                      alt={achievement.title}
+                      initial={{ opacity: 0, scale: 0.95 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.95 }}
+                      transition={{ duration: 0.4 }}
+                      className="w-full h-full object-contain relative z-10 p-3"
+                    />
+                  </AnimatePresence>
+                </>
+              ) : (
+                <span className="text-slate-500 text-xs uppercase tracking-widest font-bold">No preview image</span>
+              )}
               
               {gallery.length > 1 && (
                 <>
@@ -265,7 +294,12 @@ export default function AchievementDetail() {
               <div className="flex flex-wrap gap-6 text-slate-400 font-bold uppercase tracking-widest text-[10px]">
                 <div className="flex items-center gap-2">
                   <Calendar size={14} className="text-blue-500" />
-                  {new Date(achievement.date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
+                  {(() => {
+                    const d = achievement.date ? new Date(achievement.date) : null;
+                    return d && !isNaN(d.getTime())
+                      ? d.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+                      : 'Milestone';
+                  })()}
                 </div>
                 {achievement.author && (
                   <div className="flex items-center gap-2">
@@ -432,7 +466,9 @@ export default function AchievementDetail() {
                             <div className="flex items-center gap-2">
                                <Calendar size={10} className="text-blue-500" />
                                <span className="text-[9px] text-slate-500 font-bold uppercase tracking-widest">
-                                {new Date(comment.created_at).toLocaleDateString()}
+                                {comment.created_at && !isNaN(new Date(comment.created_at).getTime())
+                                  ? new Date(comment.created_at).toLocaleDateString()
+                                  : 'Recent'}
                               </span>
                             </div>
                           </div>
