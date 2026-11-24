@@ -1,22 +1,17 @@
-import React, { Suspense, lazy, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import Navbar from '../components/public/Navbar';
 import Hero from '../components/public/Hero';
 import Clients from '../components/public/Clients';
 import Experience from '../components/public/Experience';
 import Skills from '../components/public/Skills';
+import Reviews from '../components/public/Reviews';
+import Projects from '../components/public/Projects';
+import Achievements from '../components/public/Achievements';
+import Blogs from '../components/public/Blogs';
+import Contact from '../components/public/Contact';
+import Footer from '../components/public/Footer';
+import FloatingChat from '../components/public/FloatingChat';
 import { useLocation } from 'react-router-dom';
-
-const Reviews = lazy(() => import('../components/public/Reviews'));
-const Projects = lazy(() => import('../components/public/Projects'));
-const Achievements = lazy(() => import('../components/public/Achievements'));
-const Blogs = lazy(() => import('../components/public/Blogs'));
-const Contact = lazy(() => import('../components/public/Contact'));
-const Footer = lazy(() => import('../components/public/Footer'));
-const FloatingChat = lazy(() => import('../components/public/FloatingChat'));
-
-function SectionFallback({ id, minHeight = 'min-h-[280px]' }: { id?: string; minHeight?: string }) {
-  return <div id={id} className={minHeight} aria-hidden="true" />;
-}
 
 export default function Home() {
   const location = useLocation();
@@ -44,29 +39,15 @@ export default function Home() {
         <Clients />
         <Experience />
         <Skills />
-        <Suspense fallback={<SectionFallback id="reviews" />}>
-          <Reviews />
-        </Suspense>
-        <Suspense fallback={<SectionFallback id="portfolio" minHeight="min-h-[420px]" />}>
-          <Projects />
-        </Suspense>
-        <Suspense fallback={<SectionFallback id="achievements" />}>
-          <Achievements />
-        </Suspense>
-        <Suspense fallback={<SectionFallback id="blogs" />}>
-          <Blogs />
-        </Suspense>
-        <Suspense fallback={<SectionFallback id="contact" />}>
-          <Contact />
-        </Suspense>
+        <Reviews />
+        <Projects />
+        <Achievements />
+        <Blogs />
+        <Contact />
       </main>
       <div className="relative z-10">
-        <Suspense fallback={<SectionFallback minHeight="min-h-[200px]" />}>
-          <Footer />
-        </Suspense>
-        <Suspense fallback={null}>
-          <FloatingChat />
-        </Suspense>
+        <Footer />
+        <FloatingChat />
       </div>
     </div>
   );

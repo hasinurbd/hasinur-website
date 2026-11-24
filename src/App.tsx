@@ -4,7 +4,7 @@
  */
 
 import { BrowserRouter, Routes, Route, useLocation } from "react-router-dom";
-import React, { Component, Suspense, lazy, useEffect } from "react";
+import React, { Component, Suspense, useEffect } from "react";
 import Home from "./pages/Home";
 import { ProfileProvider } from "./lib/ProfileContext";
 import { recordPageView } from "./lib/viewTracker";
@@ -39,7 +39,12 @@ class AppErrorBoundary extends Component<
           </p>
           <button
             type="button"
-            onClick={() => window.location.reload()}
+            onClick={() => {
+              try {
+                sessionStorage.removeItem('chunk_reload_attempted');
+              } catch {}
+              window.location.reload();
+            }}
             className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold transition-colors cursor-pointer"
           >
             Reload Page
@@ -63,12 +68,13 @@ function PageTracker() {
   return null;
 }
 
-// Lazy-loaded components for optimal initial payload & dynamic chunking
-const Admin = lazy(() => import("./pages/Admin"));
-const AchievementDetail = lazy(() => import("./pages/AchievementDetail"));
-const BlogDetail = lazy(() => import("./pages/BlogDetail"));
-const ProjectDetail = lazy(() => import("./pages/ProjectDetail"));
-const Resume = lazy(() => import("./pages/Resume"));
+
+
+import Admin from "./pages/Admin";
+import AchievementDetail from "./pages/AchievementDetail";
+import BlogDetail from "./pages/BlogDetail";
+import ProjectDetail from "./pages/ProjectDetail";
+import Resume from "./pages/Resume";
 
 // High-fidelity page transition loader
 const PageLoader = () => (

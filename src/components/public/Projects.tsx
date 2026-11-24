@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { getMockData, mockPortfolioItems } from '../../lib/mockData';
 import { supabase, hasSupabaseConfig } from '../../lib/supabaseClient';
 import {
@@ -11,7 +11,6 @@ import {
   MessageSquare,
   Globe,
   Maximize2,
-  Image as ImageIcon,
 } from 'lucide-react';
 import { cn, slugify } from '../../lib/utils';
 import { FloatingIcon, BackgroundBlobs } from './VisualElements';
@@ -123,7 +122,7 @@ export default function Projects() {
           ))}
         </div>
 
-        <motion.div layout className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
           {filtered.map((item, idx) => (
             <ProjectShowcaseCard
               key={item.id}
@@ -132,7 +131,7 @@ export default function Projects() {
               onOpenLiveModal={() => setPreviewProject(item)}
             />
           ))}
-        </motion.div>
+        </div>
       </div>
 
       <LivePreviewModal project={previewProject} onClose={() => setPreviewProject(null)} />
@@ -149,48 +148,6 @@ interface ProjectShowcaseCardProps {
 
 function ProjectShowcaseCard({ item, index, onOpenLiveModal }: ProjectShowcaseCardProps) {
   const hasLiveLink = isValidWebUrl(item.link);
-  const [showLiveEmbed, setShowLiveEmbed] = useState<boolean>(hasLiveLink);
-  const [iframeLoaded, setIframeLoaded] = useState<boolean>(false);
-  const [isNearViewport, setIsNearViewport] = useState<boolean>(false);
-  const previewContainerRef = useRef<HTMLDivElement>(null);
-  const [scale, setScale] = useState<number>(0.28);
-
-  useEffect(() => {
-    setShowLiveEmbed(hasLiveLink);
-  }, [hasLiveLink]);
-
-  useEffect(() => {
-    const el = previewContainerRef.current;
-    if (!el) return;
-
-    const updateScale = () => {
-      const width = el.clientWidth;
-      if (width > 0) {
-        setScale(width / 1280);
-      }
-    };
-
-    updateScale();
-    const resizeObserver = new ResizeObserver(updateScale);
-    resizeObserver.observe(el);
-
-    const intersectionObserver = new IntersectionObserver(
-      (entries) => {
-        if (entries[0]?.isIntersecting) {
-          setIsNearViewport(true);
-          intersectionObserver.disconnect();
-        }
-      },
-      { rootMargin: '250px' }
-    );
-    intersectionObserver.observe(el);
-
-    return () => {
-      resizeObserver.disconnect();
-      intersectionObserver.disconnect();
-    };
-  }, []);
-
   const projectHref = `/project/${item.id}--${slugify(item.title)}`;
   const plainDescription = stripHtml(item.description);
   const tags: string[] = Array.isArray(item.tags) ? item.tags.filter(Boolean) : [];
@@ -199,29 +156,21 @@ function ProjectShowcaseCard({ item, index, onOpenLiveModal }: ProjectShowcaseCa
 
   return (
     <motion.article
-      layout
-      initial={{ opacity: 0, y: 20 }}
+      initial={{ opacity: 0, y: 16 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, amount: 0.05 }}
-      transition={{ delay: Math.min(index * 0.05, 0.25) }}
-      className="group relative flex flex-col rounded-2xl overflow-hidden bg-slate-900/45 backdrop-blur-md border border-white/[0.08] hover:border-blue-500/40 transition-all duration-300 hover:-translate-y-1 shadow-[0_1px_0_0_rgba(255,255,255,0.04)_inset,0_18px_36px_-20px_rgba(0,0,0,0.65)] hover:shadow-[0_20px_44px_-16px_rgba(37,99,235,0.18)]"
+      transition={{ delay: Math.min(index * 0.04, 0.2), duration: 0.35 }}
+      className="group relative flex flex-col rounded-2xl overflow-hidden bg-slate-900/45 backdrop-blur-md border border-white/[0.08] hover:border-blue-500/40 transition-all duration-200 hover:-translate-y-1 shadow-[0_1px_0_0_rgba(255,255,255,0.04)_inset,0_18px_36px_-20px_rgba(0,0,0,0.65)] hover:shadow-[0_20px_44px_-16px_rgba(37,99,235,0.18)]"
     >
-      {/* Top Preview Window (Live Website Viewport or Cover Image) */}
-      <div
-        ref={previewContainerRef}
-        className="relative w-full aspect-[16/10] bg-slate-900 overflow-hidden border-b border-white/[0.06]"
-      >
-        {/* Background Cover Image (Shown when no live link, toggled off, or while live iframe loads) */}
+      {/* Top Preview Image Container */}
+      <div className="relative w-full aspect-[16/10] bg-slate-900 overflow-hidden border-b border-white/[0.06]">
         {item.image_url ? (
           <img
             src={item.image_url}
             alt={item.title}
             loading="lazy"
             decoding="async"
-            className={cn(
-              'absolute inset-0 w-full h-full object-cover transition-transform duration-500',
-              !showLiveEmbed && 'group-hover:scale-105'
-            )}
+            className="absolute inset-0 w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
           />
         ) : (
           <div className="absolute inset-0 flex flex-col items-center justify-center text-slate-600 gap-2 bg-slate-900">
@@ -230,41 +179,14 @@ function ProjectShowcaseCard({ item, index, onOpenLiveModal }: ProjectShowcaseCa
           </div>
         )}
 
-        {/* Live Website Scaled Desktop Viewport (Mounted lazily when near viewport) */}
-        {hasLiveLink && showLiveEmbed && isNearViewport && (
-          <div
-            className={cn(
-              'absolute inset-0 bg-white transition-opacity duration-500',
-              iframeLoaded ? 'opacity-100' : item.image_url ? 'opacity-0' : 'opacity-100'
-            )}
-          >
-            <iframe
-              src={normalizeWebUrl(item.link)}
-              title={`${item.title} live website view`}
-              loading="lazy"
-              tabIndex={-1}
-              onLoad={() => setIframeLoaded(true)}
-              sandbox="allow-scripts allow-same-origin allow-forms"
-              referrerPolicy="no-referrer-when-downgrade"
-              style={{
-                width: '1280px',
-                height: '800px',
-                transform: `scale(${scale})`,
-                transformOrigin: 'top left',
-              }}
-              className="absolute top-0 left-0 border-0 pointer-events-none bg-white"
-            />
-          </div>
-        )}
-
-        {/* Subtle Top Scrim for Overlay Controls */}
+        {/* Subtle Top Scrim */}
         <div className="absolute inset-x-0 top-0 h-14 bg-gradient-to-b from-slate-950/65 to-transparent pointer-events-none z-10" />
 
-        {/* Clickable Preview Link Layer */}
+        {/* Clickable Card Link Layer */}
         <Link
           to={projectHref}
           aria-label={`View details for ${item.title}`}
-          className="absolute inset-0 z-10"
+          className="absolute inset-0 z-10 cursor-pointer"
         />
 
         {/* Top-Left Category Label */}
@@ -276,25 +198,9 @@ function ProjectShowcaseCard({ item, index, onOpenLiveModal }: ProjectShowcaseCa
           </div>
         )}
 
-        {/* Top-Right Live Controls */}
+        {/* Top-Right Live Preview Button */}
         {hasLiveLink && (
           <div className="absolute top-2.5 right-2.5 z-20 flex items-center gap-1">
-            {item.image_url && (
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  setShowLiveEmbed((prev) => !prev);
-                }}
-                title={showLiveEmbed ? 'Show project image' : 'Show live website'}
-                className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-950/85 hover:bg-slate-800 text-slate-200 backdrop-blur-md border border-white/15 text-[10px] font-semibold transition-colors shadow-md"
-              >
-                {showLiveEmbed ? <ImageIcon size={11} /> : <Globe size={11} />}
-                <span>{showLiveEmbed ? 'Image' : 'Live'}</span>
-              </button>
-            )}
-
             <button
               type="button"
               onClick={(e) => {
@@ -303,9 +209,9 @@ function ProjectShowcaseCard({ item, index, onOpenLiveModal }: ProjectShowcaseCa
                 onOpenLiveModal();
               }}
               title="Open interactive live preview"
-              className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-950/85 hover:bg-emerald-600 text-emerald-400 hover:text-white backdrop-blur-md border border-emerald-500/40 text-[10px] font-semibold transition-colors shadow-md"
+              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-slate-950/90 hover:bg-emerald-600 text-emerald-400 hover:text-white backdrop-blur-md border border-emerald-500/40 text-[10px] font-semibold transition-colors shadow-md cursor-pointer"
             >
-              <Maximize2 size={10} />
+              <Maximize2 size={11} />
               <span>Live View</span>
             </button>
           </div>
@@ -359,12 +265,13 @@ function ProjectShowcaseCard({ item, index, onOpenLiveModal }: ProjectShowcaseCa
             </span>
           </div>
 
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-2.5 z-20">
             {hasLiveLink && (
               <a
                 href={normalizeWebUrl(item.link)}
                 target="_blank"
                 rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
                 className="inline-flex items-center gap-1 text-[11px] font-semibold text-slate-300 hover:text-white transition-colors whitespace-nowrap"
               >
                 <span>Visit</span>
